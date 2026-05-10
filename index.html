@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employee Rank & Allocation Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--panel-2:#1c232c;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--good:#3fb950;--warn:#d29922;--bad:#f85149;
+  --r1:#f85149;--r2:#d29922;--r3:#58a6ff;--r4:#3fb950;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px}
+header{padding:18px 28px;background:linear-gradient(180deg,#161b22,#0d1117);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+header h1{margin:0;font-size:20px;font-weight:600;letter-spacing:-0.2px}
+header .meta{font-size:12px;color:var(--muted)}
+nav{display:flex;gap:4px;padding:12px 28px;background:var(--panel);border-bottom:1px solid var(--border);overflow-x:auto;flex-wrap:wrap}
+nav button{background:transparent;color:var(--muted);border:1px solid transparent;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;transition:all .15s}
+nav button:hover{color:var(--text);background:var(--panel-2)}
+nav button.active{background:var(--panel-2);color:var(--text);border-color:var(--border)}
+main{padding:24px 28px;max-width:1600px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+h2{font-size:18px;margin:0 0 4px;font-weight:600}
+.subtitle{color:var(--muted);margin:0 0 20px;font-size:13px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.kpi{background:var(--panel);border:1px solid var(--border);padding:14px 16px;border-radius:8px}
+.kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.kpi .value{font-size:22px;font-weight:600}
+.kpi .sub{font-size:11px;color:var(--muted);margin-top:2px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:1100px){.grid-2,.grid-3{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+.card h3{margin:0 0 4px;font-size:14px;font-weight:600}
+.card .hint{color:var(--muted);font-size:12px;margin:0 0 12px}
+.chart{width:100%;height:380px}
+.chart-tall{height:520px}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.controls label{font-size:12px;color:var(--muted);margin-right:6px}
+.controls select{background:var(--panel-2);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:13px;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:right;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:0.4px;background:var(--panel-2)}
+tr:hover td{background:var(--panel-2)}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.tag-r1{background:rgba(248,81,73,0.15);color:#f85149}
+.tag-r2{background:rgba(210,153,34,0.15);color:#d29922}
+.tag-r3{background:rgba(88,166,255,0.15);color:#58a6ff}
+.tag-r4{background:rgba(63,185,80,0.15);color:#3fb950}
+.tag-low{background:rgba(248,81,73,0.15);color:#f85149}
+.tag-med{background:rgba(210,153,34,0.15);color:#d29922}
+.tag-high{background:rgba(63,185,80,0.15);color:#3fb950}
+.callout{padding:12px 14px;border-left:3px solid var(--accent);background:var(--panel-2);border-radius:0 6px 6px 0;margin:12px 0;font-size:13px}
+.callout.good{border-color:var(--good)}
+.callout.warn{border-color:var(--warn)}
+.callout.bad{border-color:var(--bad)}
+.callout strong{color:var(--text)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.split{grid-template-columns:1fr}}
+.scroll{max-height:520px;overflow-y:auto}
+footer{padding:20px 28px;color:var(--muted);font-size:11px;border-top:1px solid var(--border);margin-top:30px;text-align:center}
+.legend{display:inline-flex;gap:14px;align-items:center;font-size:12px;color:var(--muted);margin-left:8px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.bar-row{display:grid;grid-template-columns:80px 1fr 80px;gap:10px;align-items:center;margin:4px 0;font-size:12px}
+.bar{height:10px;background:var(--panel-2);border-radius:3px;overflow:hidden;display:flex}
+.bar span{display:block;height:100%}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Employee Rank & Call/Contact Allocation Dashboard</h1>
+    <div class="meta" id="metaLine">Loading…</div>
+  </div>
+  <div class="meta">
+    <span class="legend">
+      <span><span class="dot" style="background:var(--r1)"></span>R1 weakest</span>
+      <span><span class="dot" style="background:var(--r2)"></span>R2</span>
+      <span><span class="dot" style="background:var(--r3)"></span>R3</span>
+      <span><span class="dot" style="background:var(--r4)"></span>R4 strongest</span>
+    </span>
+  </div>
+</header>
+
+<nav>
+  <button data-tab="exec" class="active">Executive overview</button>
+  <button data-tab="seg">Segment performance</button>
+  <button data-tab="alloc">Rank allocation</button>
+  <button data-tab="reps">Representative performance</button>
+  <button data-tab="opt">Optimization opportunities</button>
+  <button data-tab="logic">Logic & method</button>
+</nav>
+
+<main>
+  <!-- Executive -->
+  <section id="exec" class="page active">
+    <h2>Executive overview</h2>
+    <p class="subtitle">Totals across all segments and representatives. Rank 4 is the strongest rank in the model; Rank 1 is the weakest.</p>
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="grid-2">
+      <div class="card"><h3>Volume vs revenue share by segment</h3><p class="hint">Compare contact and call share to the SOV they generate.</p><div id="execChart1" class="chart"></div></div>
+      <div class="card"><h3>Efficiency by rank (all segments combined)</h3><p class="hint">SOV per call and orders per call by rank. Higher is better.</p><div id="execChart2" class="chart"></div></div>
+    </div>
+    <div class="card">
+      <h3>Headline insights</h3>
+      <div id="headlines"></div>
+    </div>
+  </section>
+
+  <!-- Segment performance -->
+  <section id="seg" class="page">
+    <h2>Segment performance</h2>
+    <p class="subtitle">Compare the five semester segments side by side.</p>
+    <div class="card"><h3>Segment KPIs</h3><div id="segTable"></div></div>
+    <div class="grid-2">
+      <div class="card"><h3>SOV by segment</h3><div id="segChart1" class="chart"></div></div>
+      <div class="card"><h3>Calls and contacted customers by segment</h3><div id="segChart2" class="chart"></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3>Orders by segment</h3><div id="segChart3" class="chart"></div></div>
+      <div class="card"><h3>First-time acquisitions by segment</h3><div id="segChart4" class="chart"></div></div>
+    </div>
+  </section>
+
+  <!-- Rank allocation -->
+  <section id="alloc" class="page">
+    <h2>Rank allocation</h2>
+    <p class="subtitle">Does call and contact allocation match where revenue is actually generated?</p>
+    <div class="controls">
+      <label>Rank type</label>
+      <select id="rankType">
+        <option value="seg_rank_calls">Rank by reg/calls (RankRegFromCalls)</option>
+        <option value="seg_rank_contacted">Rank by reg/contacted (RankRegFromContacted)</option>
+      </select>
+      <label>Segment</label>
+      <select id="allocSeg"></select>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3>Allocation vs outcome share</h3><p class="hint">If a rank's call share is much higher than its SOV share, calls may be over-allocated to that rank.</p><div id="allocChart1" class="chart-tall"></div></div>
+      <div class="card"><h3>Efficiency by rank</h3><p class="hint">SOV per call and orders per call. The model assumes R4 &gt; R3 &gt; R2 &gt; R1.</p><div id="allocChart2" class="chart-tall"></div></div>
+    </div>
+    <div class="card"><h3>Segment x Rank table</h3><div id="allocTable" class="scroll"></div></div>
+    <div class="card"><h3>Allocation diagnostic</h3><div id="allocCallouts"></div></div>
+  </section>
+
+  <!-- Representative performance -->
+  <section id="reps" class="page">
+    <h2>Representative performance</h2>
+    <p class="subtitle">Reps inside the same segment. Names are pseudonymized — check the source data for real identities.</p>
+    <div class="controls">
+      <label>Segment</label><select id="repSeg"></select>
+      <label>Min calls</label><select id="minCalls"><option value="0">All</option><option value="200">200+</option><option value="1000" selected>1,000+</option><option value="5000">5,000+</option></select>
+      <label>Confidence</label><select id="confFilter"><option value="all">All</option><option value="High">High only</option><option value="Medium">Medium+</option></select>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3>SOV per call vs call volume</h3><p class="hint">Top-right = strong &amp; high-volume. Top-left = strong but under-tested. Bottom-right = high-volume but inefficient.</p><div id="repScatter" class="chart-tall"></div></div>
+      <div class="card"><h3>Orders per call by rep (top 20)</h3><div id="repBars" class="chart-tall"></div></div>
+    </div>
+    <div class="card"><h3>Representative table</h3><div id="repTable" class="scroll"></div></div>
+  </section>
+
+  <!-- Optimization opportunities -->
+  <section id="opt" class="page">
+    <h2>Optimization opportunities</h2>
+    <p class="subtitle">Where to shift calls and contacts to lift SOV, orders, and acquisitions.</p>
+    <div class="card">
+      <h3>Suggested shifts by segment x rank</h3>
+      <p class="hint">Shift = (SOV share) − (call share). Negative = rank is over-allocated calls relative to revenue contribution. Positive = under-allocated.</p>
+      <div id="shiftTable"></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3>High-potential reps (low volume, strong efficiency)</h3><p class="hint">SOV/call above segment average AND below median calls. Test more volume here.</p><div id="highPotential" class="scroll"></div></div>
+      <div class="card"><h3>Over-exposed reps (high volume, weak efficiency)</h3><p class="hint">Below segment-average SOV/call but above-median calls. Coach or reduce volume.</p><div id="overExposed" class="scroll"></div></div>
+    </div>
+    <div class="card">
+      <h3>Recommended allocation framework</h3>
+      <div id="recoFramework"></div>
+    </div>
+  </section>
+
+  <!-- Logic -->
+  <section id="logic" class="page">
+    <h2>Rank logic & method</h2>
+    <p class="subtitle">How RankRegFromContacted and RankRegFromCalls are computed.</p>
+    <div class="card" id="logicBlock"></div>
+  </section>
+</main>
+
+<footer>
+  Source data: kpi_employee_rank_data_7_5_26.xlsx · vw_kpi_employee_rank · fact_EmployeesRank_NewLogic. Employee names are pseudonymized.
+  <span id="footerMeta"></span>
+</footer>
+
+<script>
+const fmt = {
+  num: n => n==null||isNaN(n)?'—':Number(n).toLocaleString(undefined,{maximumFractionDigits:0}),
+  num2: n => n==null||isNaN(n)?'—':Number(n).toLocaleString(undefined,{maximumFractionDigits:2}),
+  pct: n => n==null||isNaN(n)?'—':Number(n).toFixed(1)+'%',
+  money: n => n==null||isNaN(n)?'—':'$'+Number(n).toLocaleString(undefined,{maximumFractionDigits:0})
+};
+const RANK_COLORS = {R1:'#f85149',R2:'#d29922',R3:'#58a6ff',R4:'#3fb950'};
+const PLOTLY_LAYOUT = {
+  paper_bgcolor:'#161b22', plot_bgcolor:'#161b22',
+  font:{color:'#e6edf3',family:'-apple-system,Segoe UI,Roboto,sans-serif',size:12},
+  margin:{l:60,r:20,t:30,b:60},
+  xaxis:{gridcolor:'#30363d',zerolinecolor:'#30363d'},
+  yaxis:{gridcolor:'#30363d',zerolinecolor:'#30363d'},
+  legend:{bgcolor:'rgba(0,0,0,0)'}
+};
+const PLOTLY_CONFIG = {displayModeBar:false, responsive:true};
+
+let DATA;
+fetch('data.json').then(r=>r.json()).then(d=>{DATA=d; init();}).catch(e=>{
+  document.body.innerHTML = '<div style="padding:40px;color:#f85149">Failed to load data.json: '+e+'</div>';
+});
+
+// --- Tabs ---
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById(b.dataset.tab).classList.add('active');
+  // Trigger plotly resize
+  setTimeout(()=>window.dispatchEvent(new Event('resize')),50);
+}));
+
+function init(){
+  document.getElementById('metaLine').textContent =
+    `Period ${DATA.totals.DateMin} → ${DATA.totals.DateMax} · ${DATA.totals.UniqueReps} reps · `+
+    `${fmt.num(DATA.totals.Calls)} calls · ${fmt.num(DATA.totals.Contacted)} contacted customers`;
+  document.getElementById('footerMeta').textContent = ` · Updated ${new Date().toISOString().slice(0,10)}`;
+  renderExec();
+  renderSegments();
+  setupAllocation();
+  setupReps();
+  renderOptimization();
+  renderLogic();
+}
+
+function renderExec(){
+  const t = DATA.totals;
+  const items = [
+    ['Total calls', fmt.num(t.Calls)],
+    ['Contacted customers', fmt.num(t.Contacted)],
+    ['Orders / registrations', fmt.num(t.Orders)],
+    ['First-time acquisitions', fmt.num(t.Acquisitions)],
+    ['SOV (Stat CRM)', fmt.money(t.SOV)],
+    ['SOV per call', '$'+(t.SOV/t.Calls).toFixed(2)],
+    ['SOV per contact', '$'+(t.SOV/t.Contacted).toFixed(2)],
+    ['Orders per call', ((t.Orders/t.Calls)*100).toFixed(2)+'%'],
+    ['Orders per contact', ((t.Orders/t.Contacted)*100).toFixed(1)+'%'],
+    ['Acq per call', ((t.Acquisitions/t.Calls)*100).toFixed(2)+'%'],
+    ['Acq per contact', ((t.Acquisitions/t.Contacted)*100).toFixed(1)+'%'],
+    ['Calls per contact', (t.Calls/t.Contacted).toFixed(1)],
+  ];
+  document.getElementById('kpiGrid').innerHTML = items.map(i=>
+    `<div class="kpi"><div class="label">${i[0]}</div><div class="value">${i[1]}</div></div>`).join('');
+
+  // Chart 1: contact / call / SOV share by segment
+  const segs = DATA.segments;
+  const total = segs.reduce((a,s)=>({Calls:a.Calls+s.Calls,Contacted:a.Contacted+s.Contacted,SOV:a.SOV+s.SOV,Orders:a.Orders+s.Orders}),{Calls:0,Contacted:0,SOV:0,Orders:0});
+  const x = segs.map(s=>s.SemesterCategory);
+  Plotly.newPlot('execChart1',[
+    {name:'Call share',x,y:segs.map(s=>100*s.Calls/total.Calls),type:'bar',marker:{color:'#58a6ff'}},
+    {name:'Contact share',x,y:segs.map(s=>100*s.Contacted/total.Contacted),type:'bar',marker:{color:'#d29922'}},
+    {name:'SOV share',x,y:segs.map(s=>100*s.SOV/total.SOV),type:'bar',marker:{color:'#3fb950'}},
+    {name:'Order share',x,y:segs.map(s=>100*s.Orders/total.Orders),type:'bar',marker:{color:'#a371f7'}},
+  ],{...PLOTLY_LAYOUT,barmode:'group',yaxis:{...PLOTLY_LAYOUT.yaxis,title:'Share %'}},PLOTLY_CONFIG);
+
+  // Chart 2: efficiency by rank (combined)
+  const sr = DATA.seg_rank_calls;
+  const ranks=['R1','R2','R3','R4'];
+  const byRank = ranks.map(r=>{
+    const rows = sr.filter(x=>x.RankCalls===r);
+    const c = rows.reduce((a,x)=>a+x.Calls,0);
+    const sov = rows.reduce((a,x)=>a+x.SOV,0);
+    const ord = rows.reduce((a,x)=>a+x.Orders,0);
+    return {r, sovPerCall:sov/c, ordPerCall:100*ord/c};
+  });
+  Plotly.newPlot('execChart2',[
+    {name:'SOV / call ($)',x:byRank.map(b=>b.r),y:byRank.map(b=>b.sovPerCall),type:'bar',
+      marker:{color:byRank.map(b=>RANK_COLORS[b.r])},yaxis:'y'},
+    {name:'Orders / call (%)',x:byRank.map(b=>b.r),y:byRank.map(b=>b.ordPerCall),type:'scatter',mode:'lines+markers',
+      line:{color:'#e6edf3',width:2},marker:{size:10},yaxis:'y2'}
+  ],{...PLOTLY_LAYOUT,
+      yaxis:{...PLOTLY_LAYOUT.yaxis,title:'SOV / call ($)'},
+      yaxis2:{title:'Orders / call (%)',overlaying:'y',side:'right',gridcolor:'#30363d'}},PLOTLY_CONFIG);
+
+  // Headlines
+  const lines = [];
+  // Compare R4 vs R1 SOV/call combined
+  const r1 = byRank.find(b=>b.r==='R1'), r4 = byRank.find(b=>b.r==='R4');
+  lines.push(`<div class="callout good"><strong>Rank logic mostly works:</strong> Across all segments, Rank 4 generates ${fmt.money(r4.sovPerCall)} per call vs Rank 1 at ${fmt.money(r1.sovPerCall)} — a ${((r4.sovPerCall/r1.sovPerCall-1)*100).toFixed(0)}% lift. Orders-per-call also climbs monotonically R1→R4.</div>`);
+
+  // Per-segment headline insights from seg_rank
+  const segMap = {};
+  sr.forEach(x=>{(segMap[x.SemesterCategory] ||= {})[x.RankCalls]=x;});
+  Object.keys(segMap).forEach(seg=>{
+    const m = segMap[seg];
+    if(!m.R1||!m.R4) return;
+    const lift = (m.R4.SOVperCall/m.R1.SOVperCall-1)*100;
+    const r4CallShare = m.R4.CallShare, r4SOVShare = m.R4.SOVShare;
+    const gap = r4SOVShare - r4CallShare;
+    let cls = 'callout';
+    let msg = `<strong>${seg}:</strong> R4 SOV/call lift vs R1 = ${lift.toFixed(0)}%. R4 takes ${r4CallShare.toFixed(0)}% of calls and produces ${r4SOVShare.toFixed(0)}% of SOV.`;
+    if(gap > 8) {cls+=' good'; msg += ' R4 is <strong>under-allocated</strong> calls — give it more.';}
+    else if(gap < -8) {cls+=' bad'; msg += ' R4 may be <strong>over-allocated</strong> calls.';}
+    else if(lift < 0) {cls+=' bad'; msg += ' R4 underperforms R1 — rank logic is broken in this segment.';}
+    else cls+=' warn';
+    lines.push(`<div class="${cls}">${msg}</div>`);
+  });
+  document.getElementById('headlines').innerHTML = lines.join('');
+}
+
+function renderSegments(){
+  const segs = DATA.segments;
+  const cols = ['Segment','Calls','Contacted','Orders','Acquisitions','SOV','Calls/contact','SOV/call','SOV/contact','Orders/call','Orders/contact','Acq/call','Reps'];
+  const rows = segs.map(s=>{
+    return [
+      s.SemesterCategory, fmt.num(s.Calls), fmt.num(s.Contacted), fmt.num(s.Orders),
+      fmt.num(s.Acquisitions), fmt.money(s.SOV),
+      (s.Calls/s.Contacted).toFixed(1),
+      '$'+(s.SOV/s.Calls).toFixed(2),
+      '$'+(s.SOV/s.Contacted).toFixed(1),
+      ((s.Orders/s.Calls)*100).toFixed(2)+'%',
+      ((s.Orders/s.Contacted)*100).toFixed(1)+'%',
+      ((s.Acquisitions/s.Calls)*100).toFixed(2)+'%',
+      s.UniqueEmp
+    ];
+  });
+  document.getElementById('segTable').innerHTML = renderTable(cols, rows);
+
+  const x = segs.map(s=>s.SemesterCategory);
+  Plotly.newPlot('segChart1',[{x,y:segs.map(s=>s.SOV),type:'bar',marker:{color:'#3fb950'}}],
+    {...PLOTLY_LAYOUT,yaxis:{...PLOTLY_LAYOUT.yaxis,title:'SOV ($)'}},PLOTLY_CONFIG);
+  Plotly.newPlot('segChart2',[
+    {x,y:segs.map(s=>s.Calls),name:'Calls',type:'bar',marker:{color:'#58a6ff'}},
+    {x,y:segs.map(s=>s.Contacted),name:'Contacted',type:'bar',marker:{color:'#d29922'},yaxis:'y2'}
+  ],{...PLOTLY_LAYOUT,barmode:'group',
+      yaxis:{...PLOTLY_LAYOUT.yaxis,title:'Calls'},
+      yaxis2:{title:'Contacted',overlaying:'y',side:'right',gridcolor:'#30363d'}},PLOTLY_CONFIG);
+  Plotly.newPlot('segChart3',[{x,y:segs.map(s=>s.Orders),type:'bar',marker:{color:'#a371f7'}}],
+    {...PLOTLY_LAYOUT,yaxis:{...PLOTLY_LAYOUT.yaxis,title:'Orders'}},PLOTLY_CONFIG);
+  Plotly.newPlot('segChart4',[{x,y:segs.map(s=>s.Acquisitions),type:'bar',marker:{color:'#f778ba'}}],
+    {...PLOTLY_LAYOUT,yaxis:{...PLOTLY_LAYOUT.yaxis,title:'Acquisitions'}},PLOTLY_CONFIG);
+}
+
+function setupAllocation(){
+  const segs = [...new Set(DATA.seg_rank_calls.map(x=>x.SemesterCategory))];
+  const sel = document.getElementById('allocSeg');
+  sel.innerHTML = segs.map(s=>`<option value="${s}">${s}</option>`).join('');
+  document.getElementById('rankType').addEventListener('change', renderAllocation);
+  sel.addEventListener('change', renderAllocation);
+  renderAllocation();
+}
+function renderAllocation(){
+  const dataKey = document.getElementById('rankType').value;
+  const seg = document.getElementById('allocSeg').value;
+  const rows = DATA[dataKey].filter(x=>x.SemesterCategory===seg);
+  const rankField = dataKey==='seg_rank_calls'?'RankCalls':'RankCont';
+  const ranks=['R1','R2','R3','R4'];
+  const present = ranks.map(r=>rows.find(x=>x[rankField]===r)).filter(Boolean);
+
+  // Allocation vs outcome
+  Plotly.newPlot('allocChart1',[
+    {name:'Call share',x:present.map(p=>p[rankField]),y:present.map(p=>p.CallShare),type:'bar',marker:{color:'#58a6ff'}},
+    {name:'Contact share',x:present.map(p=>p[rankField]),y:present.map(p=>p.ContactShare),type:'bar',marker:{color:'#d29922'}},
+    {name:'SOV share',x:present.map(p=>p[rankField]),y:present.map(p=>p.SOVShare),type:'bar',marker:{color:'#3fb950'}},
+    {name:'Order share',x:present.map(p=>p[rankField]),y:present.map(p=>p.OrderShare),type:'bar',marker:{color:'#a371f7'}},
+    {name:'Acq share',x:present.map(p=>p[rankField]),y:present.map(p=>p.AcqShare),type:'bar',marker:{color:'#f778ba'}},
+  ],{...PLOTLY_LAYOUT,barmode:'group',yaxis:{...PLOTLY_LAYOUT.yaxis,title:'Share %'}},PLOTLY_CONFIG);
+
+  // Efficiency
+  Plotly.newPlot('allocChart2',[
+    {name:'SOV / call ($)',x:present.map(p=>p[rankField]),y:present.map(p=>p.SOVperCall),type:'bar',marker:{color:present.map(p=>RANK_COLORS[p[rankField]])}},
+    {name:'Orders / call (%)',x:present.map(p=>p[rankField]),y:present.map(p=>p.OrdersPerCall),type:'scatter',mode:'lines+markers',line:{color:'#e6edf3',width:2},marker:{size:10},yaxis:'y2'}
+  ],{...PLOTLY_LAYOUT,
+      yaxis:{...PLOTLY_LAYOUT.yaxis,title:'SOV / call ($)'},
+      yaxis2:{title:'Orders / call (%)',overlaying:'y',side:'right',gridcolor:'#30363d'}},PLOTLY_CONFIG);
+
+  // Table
+  const cols=['Rank','Calls','Contacted','Orders','Acq','SOV','Call %','Contact %','SOV %','Order %','SOV/call','Orders/call','SOV/contact','Orders/contact'];
+  const tableRows = present.map(p=>[
+    `<span class="tag tag-${p[rankField].toLowerCase()}">${p[rankField]}</span>`,
+    fmt.num(p.Calls),fmt.num(p.Contacted),fmt.num(p.Orders),fmt.num(p.Acquisitions),fmt.money(p.SOV),
+    fmt.pct(p.CallShare),fmt.pct(p.ContactShare),fmt.pct(p.SOVShare),fmt.pct(p.OrderShare),
+    '$'+p.SOVperCall.toFixed(2), p.OrdersPerCall.toFixed(2)+'%',
+    '$'+p.SOVperContact.toFixed(1), p.OrdersPerContact.toFixed(1)+'%'
+  ]);
+  document.getElementById('allocTable').innerHTML = renderTable(cols, tableRows, true);
+
+  // Callouts
+  const cs = [];
+  present.forEach(p=>{
+    const gap = p.CallShare - p.SOVShare;
+    if(gap > 5) cs.push(`<div class="callout bad"><strong>${p[rankField]} over-allocated calls:</strong> ${p.CallShare.toFixed(1)}% of calls vs only ${p.SOVShare.toFixed(1)}% of SOV. Shift roughly ${gap.toFixed(1)} pts of call volume to higher-yield ranks.</div>`);
+    else if(gap < -5) cs.push(`<div class="callout good"><strong>${p[rankField]} under-allocated calls:</strong> ${p.CallShare.toFixed(1)}% of calls vs ${p.SOVShare.toFixed(1)}% of SOV. Add ~${(-gap).toFixed(1)} pts more call volume here.</div>`);
+  });
+  // Monotonicity check
+  const eff = present.map(p=>p.SOVperCall);
+  const mono = eff.length>=2 && eff.every((v,i)=>i===0||v>=eff[i-1]);
+  if(present.length===4){
+    if(mono) cs.push(`<div class="callout good"><strong>Rank logic is validated</strong> in ${seg}: SOV/call rises monotonically R1 → R4.</div>`);
+    else cs.push(`<div class="callout warn"><strong>Rank logic is partly broken</strong> in ${seg}: SOV/call does not rise monotonically R1 → R4. Investigate why a lower rank outperforms a higher rank.</div>`);
+  }
+  document.getElementById('allocCallouts').innerHTML = cs.join('') || '<div class="callout">No major imbalance detected for this segment.</div>';
+}
+
+function setupReps(){
+  const segs = [...new Set(DATA.employees.map(x=>x.SemesterCategory))];
+  document.getElementById('repSeg').innerHTML = segs.map(s=>`<option value="${s}">${s}</option>`).join('');
+  ['repSeg','minCalls','confFilter'].forEach(id=>document.getElementById(id).addEventListener('change',renderReps));
+  renderReps();
+}
+function renderReps(){
+  const seg = document.getElementById('repSeg').value;
+  const minC = parseInt(document.getElementById('minCalls').value,10);
+  const conf = document.getElementById('confFilter').value;
+  let rows = DATA.employees.filter(e=>e.SemesterCategory===seg && e.Calls>=minC);
+  if(conf==='High') rows = rows.filter(r=>r.Confidence==='High');
+  if(conf==='Medium') rows = rows.filter(r=>r.Confidence!=='Low');
+
+  // Scatter
+  Plotly.newPlot('repScatter',[{
+    x:rows.map(r=>r.Calls), y:rows.map(r=>r.SOVperCall),
+    mode:'markers', type:'scatter',
+    text:rows.map(r=>`${r.Rep}<br>Calls ${fmt.num(r.Calls)} · Contacted ${fmt.num(r.Contacted)}<br>SOV/call $${(r.SOVperCall||0).toFixed(2)}<br>Orders/call ${(r.OrdersPerCall||0).toFixed(2)}%<br>Avg rank-by-calls ${(r.AvgRankCalls||0).toFixed(1)}<br>Confidence: ${r.Confidence}`),
+    marker:{
+      size:rows.map(r=>Math.max(6,Math.min(40,Math.sqrt((r.SOV||0)/300)))),
+      color:rows.map(r=>r.LiftSOVperCall||0),
+      colorscale:[[0,'#f85149'],[0.5,'#d29922'],[1,'#3fb950']],
+      cmin:-100,cmax:100,
+      colorbar:{title:'Lift vs<br>seg avg %', tickfont:{color:'#e6edf3'}, titlefont:{color:'#e6edf3'}},
+      line:{color:'#0d1117',width:1}
+    },
+    hovertemplate:'%{text}<extra></extra>'
+  }],{...PLOTLY_LAYOUT,
+      xaxis:{...PLOTLY_LAYOUT.xaxis,title:'Calls (log)',type:'log'},
+      yaxis:{...PLOTLY_LAYOUT.yaxis,title:'SOV per call ($)'}},PLOTLY_CONFIG);
+
+  // Top 20 bars
+  const top = [...rows].sort((a,b)=>(b.OrdersPerCall||0)-(a.OrdersPerCall||0)).slice(0,20).reverse();
+  Plotly.newPlot('repBars',[{
+    type:'bar', orientation:'h',
+    x:top.map(r=>r.OrdersPerCall||0), y:top.map(r=>r.Rep),
+    marker:{color:top.map(r=>(r.LiftOrdersPerCall||0)>0?'#3fb950':'#f85149')},
+    text:top.map(r=>`${(r.OrdersPerCall||0).toFixed(2)}%`), textposition:'outside'
+  }],{...PLOTLY_LAYOUT,xaxis:{...PLOTLY_LAYOUT.xaxis,title:'Orders / call (%)'},margin:{l:120,r:30,t:10,b:40}},PLOTLY_CONFIG);
+
+  // Table
+  const cols=['Rep','Calls','Contacted','Orders','Acq','SOV','SOV/call','Orders/call','Avg rank (calls)','Lift vs seg avg','Confidence'];
+  const sorted = [...rows].sort((a,b)=>(b.SOV||0)-(a.SOV||0));
+  const trs = sorted.map(r=>[
+    r.Rep, fmt.num(r.Calls), fmt.num(r.Contacted), fmt.num(r.Orders), fmt.num(r.Acquisitions),
+    fmt.money(r.SOV),
+    '$'+(r.SOVperCall||0).toFixed(2),
+    (r.OrdersPerCall||0).toFixed(2)+'%',
+    (r.AvgRankCalls||0).toFixed(1),
+    `<span style="color:${(r.LiftSOVperCall||0)>0?'#3fb950':'#f85149'}">${(r.LiftSOVperCall||0).toFixed(0)}%</span>`,
+    `<span class="tag tag-${r.Confidence==='High'?'high':r.Confidence==='Medium'?'med':'low'}">${r.Confidence}</span>`
+  ]);
+  document.getElementById('repTable').innerHTML = renderTable(cols, trs, true);
+}
+
+function renderOptimization(){
+  // Shift table: per Segment x Rank, show shift = SOVShare - CallShare
+  const ranks=['R1','R2','R3','R4'];
+  const segs=[...new Set(DATA.seg_rank_calls.map(x=>x.SemesterCategory))];
+  const cols=['Segment','Rank','Calls','Call share','SOV share','Order share','Shift (SOV%-Call%)','Action'];
+  const rows=[];
+  segs.forEach(seg=>{
+    ranks.forEach(r=>{
+      const x = DATA.seg_rank_calls.find(z=>z.SemesterCategory===seg && z.RankCalls===r);
+      if(!x) return;
+      const shift = x.SOVShare - x.CallShare;
+      let action = '— hold';
+      if(shift > 5) action = `<span style="color:#3fb950">+${shift.toFixed(1)} pts: under-allocated, give more calls</span>`;
+      else if(shift < -5) action = `<span style="color:#f85149">${shift.toFixed(1)} pts: over-allocated, shift calls away</span>`;
+      rows.push([seg,`<span class="tag tag-${r.toLowerCase()}">${r}</span>`,
+        fmt.num(x.Calls),fmt.pct(x.CallShare),fmt.pct(x.SOVShare),fmt.pct(x.OrderShare),
+        (shift>0?'+':'')+shift.toFixed(1)+' pts',action]);
+    });
+  });
+  document.getElementById('shiftTable').innerHTML = renderTable(cols, rows);
+
+  // High potential / over-exposed
+  const hp = [], oe = [];
+  segs.forEach(seg=>{
+    const reps = DATA.employees.filter(e=>e.SemesterCategory===seg && e.Calls>=200);
+    if(!reps.length) return;
+    const callsArr = reps.map(r=>r.Calls).sort((a,b)=>a-b);
+    const median = callsArr[Math.floor(callsArr.length/2)];
+    reps.forEach(r=>{
+      if(r.LiftSOVperCall>20 && r.Calls < median && r.Confidence!=='Low')
+        hp.push({...r, median});
+      if(r.LiftSOVperCall<-20 && r.Calls > median && r.Confidence!=='Low')
+        oe.push({...r, median});
+    });
+  });
+  const hpCols=['Segment','Rep','Calls','SOV/call','Lift','Avg rank'];
+  document.getElementById('highPotential').innerHTML = renderTable(hpCols,
+    hp.sort((a,b)=>b.LiftSOVperCall-a.LiftSOVperCall).slice(0,40).map(r=>[
+      r.SemesterCategory,r.Rep,fmt.num(r.Calls),'$'+(r.SOVperCall||0).toFixed(2),
+      `<span style="color:#3fb950">+${r.LiftSOVperCall.toFixed(0)}%</span>`,(r.AvgRankCalls||0).toFixed(1)]));
+  document.getElementById('overExposed').innerHTML = renderTable(hpCols,
+    oe.sort((a,b)=>a.LiftSOVperCall-b.LiftSOVperCall).slice(0,40).map(r=>[
+      r.SemesterCategory,r.Rep,fmt.num(r.Calls),'$'+(r.SOVperCall||0).toFixed(2),
+      `<span style="color:#f85149">${r.LiftSOVperCall.toFixed(0)}%</span>`,(r.AvgRankCalls||0).toFixed(1)]));
+
+  // Recommended framework
+  document.getElementById('recoFramework').innerHTML = `
+    <p>Use a 70 / 20 / 10 budget per segment, recalibrated weekly with the rank refresh:</p>
+    <ul>
+      <li><strong>70% — exploit:</strong> R3 + R4 high-confidence reps with positive SOV/call lift vs segment average.</li>
+      <li><strong>20% — develop:</strong> R2 reps and any R3/R4 rep with neutral lift but rising trend.</li>
+      <li><strong>10% — explore:</strong> R1 reps and brand-new reps (IsBelow2Months) — minimum 200 calls + 30 contacted customers per rep per rank-window so the next rank cycle has a reliable signal.</li>
+    </ul>
+    <p>Hard caps to avoid runaway concentration:</p>
+    <ul>
+      <li>No single rank takes more than <strong>40%</strong> of calls in any segment unless its SOV/call lift over the next-best rank is at least 50%.</li>
+      <li>No single rep takes more than <strong>15%</strong> of segment calls unless their SOV/call is at least 50% above segment average AND confidence = High.</li>
+      <li>Minimum testing volume per rank per segment: <strong>5%</strong> of calls AND <strong>30+ contacted customers</strong> per rep, otherwise the rank result for next cycle is statistically unreliable.</li>
+    </ul>
+  `;
+}
+
+function renderLogic(){
+  document.getElementById('logicBlock').innerHTML = `
+    <h3 style="margin-top:0">vw_kpi_employee_rank — what it does</h3>
+    <p>The view UNIONs five fact tables — contacted leads, acquisitions, orders, upsales, and call-center calls — at the day × semester × language × employee grain, aggregates them to one weekly “RankDate” (each Sunday), and joins the rank that was assigned to that employee on that Sunday from <code>HelpDB.PowerBI.fact_EmployeesRank_NewLogic</code>.</p>
+    <p>Two ranks are attached to every row:</p>
+    <ul>
+      <li><strong>RankRegFromContacted</strong> — quartile rank by registrations / contacted customers in the segment.</li>
+      <li><strong>RankRegFromCalls</strong> — quartile rank by registrations / calls in the segment.</li>
+    </ul>
+    <p>In your model, <strong>Rank 1 = weakest, Rank 4 = strongest</strong>. <code>-1</code> means the employee had zero contacted (or zero calls) that week; treat it as “unranked / no signal”.</p>
+    <h3>How the rank is computed (fact_EmployeesRank_NewLogic)</h3>
+    <ol>
+      <li>For each Sunday, look back <strong>10 weeks</strong> to assemble per-employee per-segment per-language counts of <em>contacted leads</em>, <em>orders / registrations</em>, and <em>calls</em>.</li>
+      <li>Compute two efficiency ratios:
+        <ul><li><code>RegFromContacted = Reg / Contacted</code></li><li><code>RegFromCalls = Reg / Calls</code></li></ul>
+      </li>
+      <li>Within each (Date, Category, Language) group, sort employees by ratio (and break ties by NumOfReg, then EmployeeID) and run a <strong>volume-weighted cumulative quartile</strong>: employee falls in R1/R2/R3/R4 based on where the midpoint of their volume sits in the cumulative distribution. R4 is the top 25% of the segment&apos;s volume by quality.</li>
+    </ol>
+    <h3>Important nuances and risks</h3>
+    <ul>
+      <li>The rank is <strong>volume-weighted</strong>, so a rep with very few contacted customers can still land in R4 if their tiny volume falls in the top 25% slice. Sample-size guard rails are essential.</li>
+      <li>The ratio in the denominator (Reg/Contacted, Reg/Calls) ignores SOV and acquisitions. A rep can rank R4 on order count yet have low average SOV per order. Validate revenue separately.</li>
+      <li>If the team allocates more calls to whoever ranked R4 last week, they automatically have more numerator material — the rank can be self-reinforcing. Fix: enforce minimum exploration calls for R1/R2/R3.</li>
+      <li>The 10-week look-back smooths short-term variance but slows reaction to rep performance changes; new reps (IsBelow2Months) will skew low until their window fills.</li>
+    </ul>
+    <h3>What the rank rewards</h3>
+    <p>Order-conversion efficiency, not revenue. Use this dashboard to cross-check that high-rank reps also drive SOV and acquisitions.</p>
+    <h3>Confidence flag rules used here</h3>
+    <ul>
+      <li><span class="tag tag-low">Low</span> &lt; 200 calls or &lt; 30 contacted customers in the period — do not draw conclusions.</li>
+      <li><span class="tag tag-med">Medium</span> 200-1000 calls and 30-100 contacted customers — directional only.</li>
+      <li><span class="tag tag-high">High</span> ≥ 1,000 calls and ≥ 100 contacted customers — reliable.</li>
+    </ul>
+  `;
+}
+
+function renderTable(cols, rows, dense=false){
+  const head = '<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead>';
+  const body = '<tbody>'+rows.map(r=>'<tr>'+r.map((c,i)=>`<td>${c}</td>`).join('')+'</tr>').join('')+'</tbody>';
+  return '<table>'+head+body+'</table>';
+}
+</script>
+</body>
+</html>
