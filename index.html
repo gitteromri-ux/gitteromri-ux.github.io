@@ -1,400 +1,265 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rank Lens · Employee Rank & Allocation Analytics</title>
-<link rel="preconnect" href="https://rsms.me/">
-<link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@500,700&f[]=jetbrains-mono@500&display=swap">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Rank Goals · School × Language allocation</title>
+<link href="https://rsms.me/inter/inter.css" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <style>
 :root{
-  /* Surfaces */
-  --bg:#0A0B0F;
-  --bg-2:#0E1015;
-  --surface:#13161D;
-  --surface-2:#181C25;
-  --surface-3:#1D2230;
-  --border:#262B38;
-  --border-2:#323847;
-  --hairline:rgba(255,255,255,.06);
-
-  /* Text */
-  --text:#F2F4F8;
-  --text-2:#C7CCD6;
-  --muted:#8A92A3;
-  --faint:#5C6371;
-
-  /* Accent */
-  --accent:#7BA7FF;
-  --accent-2:#A78BFA;
-  --accent-grad:linear-gradient(135deg,#7BA7FF 0%,#A78BFA 50%,#F0ABFC 100%);
-
-  /* Semantic */
-  --good:#56D9A6;
-  --warn:#F4B23C;
-  --bad:#FF6B7A;
-  --info:#6FB8FF;
-
-  /* Rank palette - intentional, sequential + cool to warm */
-  --r1:#FF6B7A;
-  --r2:#F4B23C;
-  --r3:#6FB8FF;
-  --r4:#56D9A6;
-
-  /* Shadows */
-  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
-  --shadow:0 8px 24px rgba(0,0,0,.35), 0 0 0 1px var(--hairline) inset;
-  --shadow-lg:0 24px 60px rgba(0,0,0,.5), 0 0 0 1px var(--hairline) inset;
-  --glow-accent:0 0 0 1px rgba(123,167,255,.25), 0 8px 32px rgba(123,167,255,.15);
-
-  /* Motion */
-  --ease:cubic-bezier(.2,.8,.2,1);
-  --dur:240ms;
+  --bg:#0A0B0F; --surface:#13161D; --surface-2:#181C25; --surface-3:#1E2330;
+  --text:#F2F4F8; --text-2:#C7CCD6; --muted:#8A92A3;
+  --hairline:#1F242E; --border:#262B38; --border-2:#323847;
+  --accent:#7BA7FF; --accent-2:#A78BFA; --accent-3:#F0ABFC;
+  --good:#56D9A6; --warn:#F4B23C; --bad:#FF6B7A; --info:#6FB8FF;
+  --r1:#FF6B7A; --r2:#F4B23C; --r3:#6FB8FF; --r4:#56D9A6;
+  --dur:.18s; --ease:cubic-bezier(.2,.7,.2,1);
 }
 *{box-sizing:border-box}
-html{font-feature-settings:"cv11","ss01","ss03","tnum";-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.5}
+h1,h2,h3,h4{font-family:'Satoshi','Inter',sans-serif;font-weight:700;letter-spacing:-.02em;margin:0}
 body{
-  margin:0;background:var(--bg);color:var(--text);
-  font-family:'Inter',-apple-system,system-ui,sans-serif;
-  font-size:14px;line-height:1.5;
-  background-image:
-    radial-gradient(1200px 600px at 90% -10%, rgba(167,139,250,.08), transparent 60%),
-    radial-gradient(900px 500px at -10% 10%, rgba(123,167,255,.06), transparent 55%),
-    radial-gradient(800px 800px at 50% 120%, rgba(86,217,166,.04), transparent 50%);
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(123,167,255,.07), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(167,139,250,.05), transparent 60%),
+    var(--bg);
   min-height:100vh;
 }
-::selection{background:rgba(123,167,255,.3);color:#fff}
+.muted{color:var(--muted)}
+.text-good{color:var(--good)} .text-bad{color:var(--bad)} .text-warn{color:var(--warn)} .text-info{color:var(--info)}
 
-/* SCROLLBAR */
-::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;border:2px solid var(--bg)}
-::-webkit-scrollbar-thumb:hover{background:var(--border-2)}
-
-/* TYPOGRAPHY */
-.display{font-family:'Satoshi','Inter',sans-serif;letter-spacing:-0.02em;font-weight:700}
-.mono{font-family:'JetBrains Mono','SF Mono',Consolas,monospace}
-.tnum{font-variant-numeric:tabular-nums}
-
-/* ============= APP SHELL ============= */
+/* ============ LAYOUT ============ */
 .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-@media(max-width:1100px){.app{grid-template-columns:1fr}.sidebar{display:none}}
-
-/* SIDEBAR */
 .sidebar{
-  position:sticky;top:0;height:100vh;
-  background:linear-gradient(180deg,rgba(19,22,29,.85),rgba(10,11,15,.95));
-  backdrop-filter:blur(20px);
-  border-right:1px solid var(--hairline);
-  padding:24px 16px;display:flex;flex-direction:column;gap:8px;z-index:5;
+  background:linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%);
+  border-right:1px solid var(--hairline);padding:24px 16px;position:sticky;top:0;height:100vh;overflow-y:auto;
 }
-.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 24px;border-bottom:1px solid var(--hairline);margin-bottom:18px}
 .brand-mark{
-  width:32px;height:32px;border-radius:9px;
-  background:var(--accent-grad);
-  display:grid;place-items:center;
-  box-shadow:var(--glow-accent);
-  position:relative;overflow:hidden;
+  width:36px;height:36px;border-radius:9px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2),var(--accent-3));
+  display:flex;align-items:center;justify-content:center;color:#0A0B0F;font-weight:800;font-size:13px;
 }
-.brand-mark::before{content:"";position:absolute;inset:1px;border-radius:8px;background:linear-gradient(135deg,#1c1f2a,#0f1219);opacity:.85}
-.brand-mark svg{position:relative;z-index:1}
-.brand-name{font-family:'Satoshi','Inter',sans-serif;font-weight:700;font-size:15px;letter-spacing:-.01em}
-.brand-sub{font-size:11px;color:var(--muted);margin-top:1px}
-.nav-section{margin-top:16px;padding:0 8px;font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.brand-name{font-weight:700;font-size:14.5px}
+.brand-sub{font-size:11px;color:var(--muted)}
+.nav-group{margin:18px 0 8px;padding:0 8px;font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600}
 .nav-btn{
-  display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;
-  background:transparent;color:var(--text-2);border:1px solid transparent;
-  cursor:pointer;font-size:13.5px;font-weight:500;transition:all var(--dur) var(--ease);
-  width:100%;text-align:left;font-family:inherit;
+  display:flex;align-items:center;gap:11px;width:100%;padding:9px 10px;border:none;background:transparent;
+  color:var(--text-2);border-radius:8px;cursor:pointer;font-size:13.5px;font-family:inherit;text-align:left;
+  transition:all var(--dur) var(--ease);font-weight:500;
 }
-.nav-btn svg{flex-shrink:0;opacity:.7;transition:opacity var(--dur) var(--ease)}
-.nav-btn:hover{background:var(--surface);color:var(--text)}
-.nav-btn:hover svg{opacity:1}
-.nav-btn.active{
-  background:linear-gradient(180deg,rgba(123,167,255,.12),rgba(167,139,250,.07));
-  color:var(--text);
-  border-color:rgba(123,167,255,.2);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
-}
-.nav-btn.active svg{opacity:1;color:var(--accent)}
-.nav-spacer{flex:1}
-.nav-foot{padding:12px 8px;font-size:11px;color:var(--faint);line-height:1.5;border-top:1px solid var(--hairline);margin-top:8px}
+.nav-btn:hover{background:var(--surface-2);color:var(--text)}
+.nav-btn.active{background:linear-gradient(90deg,rgba(123,167,255,.15),rgba(167,139,250,.06));color:var(--text);box-shadow:inset 2px 0 0 var(--accent)}
+.nav-icon{width:16px;height:16px;flex-shrink:0;opacity:.85}
+.sidebar-foot{position:absolute;bottom:18px;left:16px;right:16px;font-size:11px;color:var(--muted);line-height:1.55}
 
-/* TOP BAR */
+/* ============ TOPBAR + FILTERS ============ */
 .topbar{
-  position:sticky;top:0;z-index:4;
-  background:linear-gradient(180deg,rgba(10,11,15,.85),rgba(10,11,15,.65));
+  position:sticky;top:0;z-index:5;
+  background:linear-gradient(180deg,rgba(10,11,15,.92),rgba(10,11,15,.78));
   backdrop-filter:blur(20px);
   border-bottom:1px solid var(--hairline);
-  padding:14px 32px;
-  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;
 }
-.topbar-l{display:flex;flex-direction:column;gap:2px}
-.topbar h1{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em}
-.topbar-meta{font-size:12px;color:var(--muted)}
-.topbar-r{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.chip{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:6px 11px;border-radius:999px;background:var(--surface);
-  border:1px solid var(--hairline);font-size:11.5px;color:var(--text-2);
-  font-variant-numeric:tabular-nums;
-}
-.chip-dot{width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px rgba(86,217,166,.15)}
+.topbar h1{font-size:16px}
+.topbar-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.topbar-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;background:var(--surface);border:1px solid var(--hairline);font-size:11.5px;color:var(--text-2)}
+.chip-dot{width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px rgba(86,217,166,.18)}
+
 .select{
   background:var(--surface);color:var(--text);border:1px solid var(--border);
-  padding:7px 32px 7px 12px;border-radius:8px;font-size:13px;font-family:inherit;
-  cursor:pointer;appearance:none;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'><path d='M1 1l4 4 4-4' stroke='%238A92A3' stroke-width='1.5' stroke-linecap='round'/></svg>");
+  padding:7px 30px 7px 12px;border-radius:8px;font-size:12.5px;font-family:inherit;cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%238A92A3' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");
   background-repeat:no-repeat;background-position:right 10px center;
   transition:border-color var(--dur) var(--ease);
 }
 .select:hover{border-color:var(--border-2)}
 .select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(123,167,255,.15)}
-.select-sm{padding:5px 26px 5px 9px;font-size:12px}
-.filter-cluster{
+.select-sm{padding:5px 26px 5px 9px;font-size:11.5px}
+
+.filter-group{
   display:inline-flex;align-items:center;gap:6px;padding:4px 8px;
-  background:rgba(255,255,255,.025);border:1px solid var(--hairline);
-  border-radius:10px;
+  background:rgba(255,255,255,.025);border:1px solid var(--hairline);border-radius:10px;
 }
-.filter-label{font-size:10.5px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;font-weight:600;margin-left:2px}
-.seg-sm button{padding:4px 9px;font-size:11px}
+.filter-label{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin:0 2px}
+
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--hairline);border-radius:8px;padding:2px;gap:2px}
+.seg button{
+  background:transparent;color:var(--muted);border:none;padding:5px 11px;font-size:11.5px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500;
+  transition:all var(--dur) var(--ease);
+}
+.seg button:hover{color:var(--text-2)}
+.seg button.active{background:var(--surface-3);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.04)}
+
 .btn-reset{
-  background:transparent;color:var(--muted);border:1px solid var(--hairline);
-  padding:6px 11px;border-radius:8px;font-size:12px;cursor:pointer;
-  font-family:inherit;transition:all var(--dur) var(--ease);
+  background:transparent;color:var(--muted);border:1px solid var(--hairline);padding:6px 11px;border-radius:8px;
+  font-size:12px;cursor:pointer;font-family:inherit;transition:all var(--dur) var(--ease);
 }
 .btn-reset:hover{color:var(--text);border-color:var(--border-2);background:var(--surface)}
+
 .filterbar{
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  padding:10px 32px;background:rgba(123,167,255,.04);
-  border-bottom:1px solid var(--hairline);font-size:12px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 28px;
+  background:rgba(123,167,255,.04);border-bottom:1px solid var(--hairline);font-size:12px;
 }
 .filterbar.empty{display:none}
-.filterbar-label{color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:10.5px}
-.filterbar-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.filterbar-label{color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:10px}
 .filter-chip{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:4px 10px 4px 11px;border-radius:999px;
-  background:rgba(123,167,255,.12);border:1px solid rgba(123,167,255,.3);
-  color:var(--accent);font-size:11.5px;font-weight:500;
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 11px;border-radius:999px;
+  background:rgba(123,167,255,.12);border:1px solid rgba(123,167,255,.3);color:var(--accent);font-size:11.5px;font-weight:500;
 }
-.filter-chip button{
-  background:none;border:none;color:inherit;cursor:pointer;
-  font-size:13px;line-height:1;padding:0 0 0 2px;opacity:.7;
-}
+.filter-chip button{background:none;border:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 2px;opacity:.7}
 .filter-chip button:hover{opacity:1}
-.filterbar-summary{color:var(--muted);font-variant-numeric:tabular-nums;font-size:11.5px}
-@media(max-width:1100px){.filterbar{padding:8px 16px}.filter-cluster{flex-wrap:wrap}}
+.filterbar-summary{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums;font-size:11.5px}
 
-/* MAIN */
-main{padding:28px 32px 60px;max-width:1500px;margin:0 auto}
-.page{display:none;animation:fadeIn .4s var(--ease)}
+/* ============ MAIN ============ */
+main{padding:28px 28px 60px;max-width:1500px;margin:0 auto}
+.page{display:none;animation:fadeIn .35s var(--ease)}
 .page.active{display:block}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-.page-head{margin-bottom:28px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
-.page-title{margin:0;font-size:28px;font-weight:700;letter-spacing:-.025em;font-family:'Satoshi','Inter',sans-serif}
-.page-sub{margin:4px 0 0;color:var(--muted);font-size:14px;max-width:680px;line-height:1.6}
 
-/* CARD */
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:22px;flex-wrap:wrap}
+.page-title{font-size:26px;letter-spacing:-.02em}
+.page-sub{color:var(--muted);font-size:13.5px;margin-top:6px;max-width:680px;line-height:1.6}
+
 .card{
-  background:linear-gradient(180deg,rgba(24,28,37,.7),rgba(19,22,29,.85));
-  border:1px solid var(--hairline);
-  border-radius:14px;
-  padding:20px 22px;
-  position:relative;
-  overflow:hidden;
+  background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:20px;
   transition:border-color var(--dur) var(--ease);
 }
-.card::before{
-  content:"";position:absolute;inset:0;
-  background:radial-gradient(600px 200px at 0% 0%, rgba(123,167,255,.05), transparent 60%);
-  pointer-events:none;
-}
-.card:hover{border-color:var(--border-2)}
-.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;position:relative}
-.card-title{margin:0;font-size:14px;font-weight:600;letter-spacing:-.005em}
-.card-hint{margin:3px 0 0;color:var(--muted);font-size:12.5px;line-height:1.45}
-.card-body{position:relative}
+.card:hover{border-color:var(--border)}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:14px}
+.card-title{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.card-hint{color:var(--muted);font-size:12px;margin-top:4px;max-width:600px}
+.chart{width:100%;height:380px}
 
-/* GRID */
-.grid{display:grid;gap:18px}
-.grid-kpi{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
-.grid-2{grid-template-columns:repeat(2,1fr)}
+.grid{display:grid;gap:16px}
+.grid-2{grid-template-columns:1fr 1fr}
 .grid-3{grid-template-columns:repeat(3,1fr)}
-.grid-12{grid-template-columns:repeat(12,1fr)}
-@media(max-width:1100px){.grid-2,.grid-3{grid-template-columns:1fr}.grid-12{grid-template-columns:1fr}}
-.col-4{grid-column:span 4}.col-5{grid-column:span 5}.col-6{grid-column:span 6}.col-7{grid-column:span 7}.col-8{grid-column:span 8}.col-12{grid-column:span 12}
-@media(max-width:1100px){.col-4,.col-5,.col-6,.col-7,.col-8,.col-12{grid-column:span 1}}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:1100px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
 
-/* KPI TILE */
+/* ============ KPI CARDS ============ */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
 .kpi{
-  background:linear-gradient(180deg,rgba(24,28,37,.6),rgba(19,22,29,.8));
-  border:1px solid var(--hairline);
-  border-radius:14px;
-  padding:18px 20px;
+  background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:16px 18px;
   position:relative;overflow:hidden;
-  transition:transform var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
-.kpi:hover{transform:translateY(-2px);border-color:var(--border-2)}
-.kpi::after{
-  content:"";position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(123,167,255,.4),transparent);
-  opacity:0;transition:opacity var(--dur) var(--ease);
-}
-.kpi:hover::after{opacity:1}
-.kpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.kpi-value{font-size:28px;font-weight:700;letter-spacing:-.02em;font-family:'Satoshi','Inter',sans-serif;font-variant-numeric:tabular-nums;line-height:1.1}
-.kpi-sub{font-size:12px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px}
-.delta{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums}
-.delta.up{color:var(--good)}
-.delta.dn{color:var(--bad)}
-.kpi-spark{position:absolute;right:12px;bottom:10px;opacity:.8}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+.kpi.good::before{background:var(--good)} .kpi.warn::before{background:var(--warn)} .kpi.bad::before{background:var(--bad)}
+.kpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.kpi-value{font-family:'Satoshi','Inter';font-size:26px;font-weight:700;margin-top:6px;letter-spacing:-.02em;line-height:1.1}
+.kpi-sub{font-size:11.5px;color:var(--muted);margin-top:4px}
 
-/* RANK BADGE */
-.rank{
-  display:inline-flex;align-items:center;justify-content:center;
-  min-width:30px;height:22px;border-radius:6px;font-size:11px;font-weight:700;
-  font-variant-numeric:tabular-nums;letter-spacing:.02em;padding:0 8px;
-  border:1px solid;
+/* ============ HEATMAP ============ */
+.heatmap-wrap{overflow-x:auto;padding-bottom:8px}
+.heatmap{border-collapse:separate;border-spacing:3px;width:100%;min-width:760px}
+.heatmap th, .heatmap td{padding:0;font-size:11.5px;font-variant-numeric:tabular-nums;text-align:center}
+.heatmap th{
+  font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-size:10px;
+  padding:6px 4px;background:transparent;border-bottom:1px solid var(--hairline);
 }
-.rank-r1{background:rgba(255,107,122,.12);color:var(--r1);border-color:rgba(255,107,122,.25)}
-.rank-r2{background:rgba(244,178,60,.12);color:var(--r2);border-color:rgba(244,178,60,.25)}
-.rank-r3{background:rgba(111,184,255,.12);color:var(--r3);border-color:rgba(111,184,255,.25)}
-.rank-r4{background:rgba(86,217,166,.12);color:var(--r4);border-color:rgba(86,217,166,.25)}
-
-/* PILL */
-.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.01em}
-.pill-good{background:rgba(86,217,166,.12);color:var(--good)}
-.pill-warn{background:rgba(244,178,60,.12);color:var(--warn)}
-.pill-bad{background:rgba(255,107,122,.12);color:var(--bad)}
-.pill-mute{background:var(--surface-2);color:var(--text-2)}
-.pill-info{background:rgba(111,184,255,.12);color:var(--info)}
-
-/* CHART CONTAINER */
-.chart{width:100%;height:340px}
-.chart-tall{height:480px}
-.chart-xs{height:60px}
-
-/* INSIGHT */
-.insight{
-  display:flex;gap:14px;padding:16px 18px;border-radius:12px;
-  background:linear-gradient(180deg,rgba(24,28,37,.6),rgba(19,22,29,.6));
-  border:1px solid var(--hairline);position:relative;
-  margin-bottom:10px;transition:all var(--dur) var(--ease);
+.heatmap th.col-school{text-align:left;padding-left:10px;min-width:140px}
+.heatmap td.cell-school{text-align:left;padding:10px 10px;color:var(--text);font-weight:500;background:var(--surface);border-radius:6px}
+.heatmap-cell{
+  height:54px;border-radius:6px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;
+  transition:transform var(--dur) var(--ease),box-shadow var(--dur) var(--ease);position:relative;
 }
-.insight:hover{border-color:var(--border-2);transform:translateX(2px)}
-.insight-icon{
-  flex-shrink:0;width:32px;height:32px;border-radius:8px;
-  display:grid;place-items:center;font-size:14px;font-weight:700;
-}
-.insight.good .insight-icon{background:rgba(86,217,166,.12);color:var(--good)}
-.insight.warn .insight-icon{background:rgba(244,178,60,.12);color:var(--warn)}
-.insight.bad .insight-icon{background:rgba(255,107,122,.12);color:var(--bad)}
-.insight.info .insight-icon{background:rgba(111,184,255,.12);color:var(--info)}
-.insight-body{flex:1}
-.insight-title{margin:0 0 3px;font-weight:600;font-size:13.5px}
-.insight-text{margin:0;color:var(--text-2);font-size:13px;line-height:1.55}
-.insight-text strong{color:var(--text);font-weight:600}
+.heatmap-cell:hover{transform:scale(1.04);box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 0 2px var(--accent)}
+.heatmap-cell.empty{background:var(--surface-2)!important;cursor:default}
+.heatmap-cell.empty:hover{transform:none;box-shadow:none}
+.heatmap-cell .v{font-weight:700;font-size:12.5px}
+.heatmap-cell .g{font-size:9.5px;opacity:.85}
+.heatmap-conf{position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--warn);opacity:.9}
+.heatmap-legend{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.legend-grad{height:10px;width:160px;border-radius:5px;background:linear-gradient(90deg,#FF6B7A,#F4B23C,#56D9A6)}
+.metric-toggle{display:inline-flex;background:var(--surface);border:1px solid var(--hairline);border-radius:8px;padding:2px;gap:2px;margin-bottom:14px}
+.metric-toggle button{background:transparent;color:var(--muted);border:none;padding:7px 14px;font-size:12px;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:500}
+.metric-toggle button.active{background:var(--surface-3);color:var(--text)}
 
-/* TABLE */
-.table-wrap{overflow:auto;max-height:560px;border-radius:10px}
-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
-thead{position:sticky;top:0;z-index:1}
-th{
-  text-align:left;padding:11px 14px;
-  background:var(--surface-2);
-  color:var(--muted);font-weight:600;font-size:10.5px;
-  text-transform:uppercase;letter-spacing:.06em;
-  border-bottom:1px solid var(--border);
-  white-space:nowrap;cursor:pointer;user-select:none;
-  transition:color var(--dur) var(--ease);
+/* ============ TABLES ============ */
+.table-wrap{overflow-x:auto;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{
+  text-align:left;padding:10px 12px;color:var(--muted);font-weight:600;font-size:11px;
+  text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--hairline);
+  position:sticky;top:0;background:var(--surface);cursor:pointer;user-select:none;
 }
-th:hover{color:var(--text)}
-th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
-th .sort-i{display:inline-block;margin-left:4px;opacity:.4;font-size:9px}
-th.sort-asc .sort-i,th.sort-desc .sort-i{opacity:1;color:var(--accent)}
-td{padding:10px 14px;border-bottom:1px solid var(--hairline);white-space:nowrap}
+thead th:hover{color:var(--text)}
+thead th.num{text-align:right}
+thead th .sort-i{margin-left:6px;color:var(--muted);opacity:.6;font-size:10px}
+thead th.sort-asc .sort-i, thead th.sort-desc .sort-i{opacity:1;color:var(--accent)}
+tbody td{padding:11px 12px;border-bottom:1px solid var(--hairline);font-variant-numeric:tabular-nums}
+tbody td.num{text-align:right}
 tbody tr{transition:background var(--dur) var(--ease)}
-tbody tr:hover td{background:rgba(123,167,255,.03)}
-tbody tr.row-emph td{background:rgba(86,217,166,.04)}
-tbody tr.row-bad td{background:rgba(255,107,122,.04)}
+tbody tr:hover{background:rgba(123,167,255,.05)}
+tbody tr:last-child td{border-bottom:none}
 
-/* CONTROLS */
-.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:18px;padding:14px 16px;background:var(--surface);border:1px solid var(--hairline);border-radius:12px}
-.controls label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-right:-4px}
-.search-input{
-  background:var(--bg-2);color:var(--text);border:1px solid var(--border);
-  padding:7px 12px 7px 32px;border-radius:8px;font-size:13px;font-family:inherit;
-  width:220px;transition:all var(--dur) var(--ease);
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none'><circle cx='6' cy='6' r='5' stroke='%238A92A3' stroke-width='1.5'/><path d='M10 10l3 3' stroke='%238A92A3' stroke-width='1.5' stroke-linecap='round'/></svg>");
-  background-repeat:no-repeat;background-position:11px center;
-}
-.search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(123,167,255,.15);width:280px}
+.rank{display:inline-flex;align-items:center;justify-content:center;min-width:30px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.02em}
+.rank-r1{background:rgba(255,107,122,.12);color:var(--r1);border:1px solid rgba(255,107,122,.25)}
+.rank-r2{background:rgba(244,178,60,.12);color:var(--r2);border:1px solid rgba(244,178,60,.25)}
+.rank-r3{background:rgba(111,184,255,.12);color:var(--r3);border:1px solid rgba(111,184,255,.25)}
+.rank-r4{background:rgba(86,217,166,.12);color:var(--r4);border:1px solid rgba(86,217,166,.25)}
 
-/* SEGMENTED CONTROL */
-.seg{display:inline-flex;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px}
-.seg button{
-  background:transparent;color:var(--muted);border:none;padding:6px 12px;
-  border-radius:6px;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;
-  transition:all var(--dur) var(--ease);white-space:nowrap;
-}
-.seg button:hover{color:var(--text)}
-.seg button.active{background:var(--surface-3);color:var(--text);box-shadow:var(--shadow-sm)}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500}
+.pill-good{background:rgba(86,217,166,.12);color:var(--good);border:1px solid rgba(86,217,166,.25)}
+.pill-warn{background:rgba(244,178,60,.12);color:var(--warn);border:1px solid rgba(244,178,60,.25)}
+.pill-bad{background:rgba(255,107,122,.12);color:var(--bad);border:1px solid rgba(255,107,122,.25)}
+.pill-mute{background:var(--surface-2);color:var(--muted);border:1px solid var(--hairline)}
+.pill-info{background:rgba(111,184,255,.1);color:var(--info);border:1px solid rgba(111,184,255,.25)}
 
-/* PROGRESS BAR (horizontal share) */
-.bar-stack{display:flex;height:8px;border-radius:6px;overflow:hidden;background:var(--surface-2)}
-.bar-stack span{display:block;height:100%;transition:width 800ms var(--ease)}
-.bar-row-grid{display:grid;grid-template-columns:140px 1fr 80px;gap:14px;align-items:center;padding:8px 0;font-size:12.5px;border-bottom:1px solid var(--hairline)}
-.bar-row-grid:last-child{border-bottom:none}
-.bar-label{color:var(--text-2);font-weight:500}
-.bar-val{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.divider{height:1px;background:var(--hairline);margin:18px 0}
 
-/* TAB SUBNAV */
-.tabs{display:flex;gap:4px;border-bottom:1px solid var(--hairline);margin-bottom:18px}
-.tab{
-  background:transparent;color:var(--muted);border:none;padding:10px 14px;
-  font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;
-  position:relative;transition:color var(--dur) var(--ease);
-}
-.tab:hover{color:var(--text-2)}
-.tab.active{color:var(--text)}
-.tab.active::after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:2px;background:var(--accent-grad);border-radius:2px}
-
-/* DRAWER (drill-down) */
-.drawer-mask{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);z-index:50;opacity:0;pointer-events:none;transition:opacity var(--dur) var(--ease)}
+/* ============ DRAWER ============ */
+.drawer-mask{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity var(--dur) var(--ease);z-index:90}
 .drawer-mask.open{opacity:1;pointer-events:auto}
-.drawer{position:fixed;top:0;right:0;height:100vh;width:min(720px,100%);background:var(--bg);border-left:1px solid var(--border);z-index:51;transform:translateX(100%);transition:transform .35s var(--ease);overflow:auto;box-shadow:var(--shadow-lg)}
-.drawer.open{transform:none}
-.drawer-head{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--hairline);position:sticky;top:0;background:linear-gradient(180deg,rgba(10,11,15,.95),rgba(10,11,15,.85));backdrop-filter:blur(20px);z-index:1}
-.drawer-title{margin:0;font-size:16px;font-weight:600}
-.drawer-close{background:var(--surface);color:var(--text-2);border:1px solid var(--hairline);padding:7px 12px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;transition:all var(--dur) var(--ease)}
-.drawer-close:hover{color:var(--text);border-color:var(--border-2)}
-.drawer-body{padding:24px}
-
-/* TINY HELPERS */
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.muted{color:var(--muted)}
-.text-good{color:var(--good)}.text-bad{color:var(--bad)}.text-warn{color:var(--warn)}
-.divider{height:1px;background:var(--hairline);margin:20px 0}
-.empty{padding:40px;text-align:center;color:var(--muted);font-size:13px}
-
-/* MOBILE NAV TOGGLE (very simple) */
-.mob-nav{display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px;z-index:6;box-shadow:var(--shadow-lg);gap:2px}
-@media(max-width:1100px){.mob-nav{display:flex;flex-wrap:wrap;justify-content:center}main{padding:20px 16px 100px}.topbar{padding:14px 16px}}
-.mob-nav button{background:transparent;color:var(--muted);border:none;padding:7px 11px;border-radius:999px;font-size:12px;cursor:pointer;font-family:inherit}
-.mob-nav button.active{background:var(--surface-3);color:var(--text)}
-
-/* PRINT */
-@media print{
-  .sidebar,.topbar,.mob-nav,.controls{display:none}
-  body{background:#fff;color:#000}
-  .card{break-inside:avoid;border-color:#ccc}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:560px;max-width:96vw;
+  background:var(--surface);border-left:1px solid var(--border);box-shadow:-20px 0 60px rgba(0,0,0,.5);
+  transform:translateX(100%);transition:transform var(--dur) var(--ease);z-index:95;overflow-y:auto;
 }
+.drawer.open{transform:translateX(0)}
+.drawer-head{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--hairline);position:sticky;top:0;background:var(--surface);z-index:1}
+.drawer-title{font-size:15px;font-weight:600}
+.drawer-close{background:transparent;color:var(--muted);border:1px solid var(--hairline);padding:5px 10px;border-radius:7px;cursor:pointer;font-size:12px;font-family:inherit}
+.drawer-close:hover{color:var(--text);border-color:var(--border-2)}
+.drawer-body{padding:20px 22px}
 
-/* ICON */
-.icon{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* ============ INSIGHT CALLOUTS ============ */
+.insight{display:flex;gap:12px;padding:14px 16px;border-radius:10px;background:var(--surface-2);border:1px solid var(--hairline);margin-bottom:10px}
+.insight.good{border-left:3px solid var(--good)}
+.insight.warn{border-left:3px solid var(--warn)}
+.insight.bad{border-left:3px solid var(--bad)}
+.insight.info{border-left:3px solid var(--info)}
+.insight-icon{flex-shrink:0;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.insight.good .insight-icon{background:rgba(86,217,166,.15);color:var(--good)}
+.insight.warn .insight-icon{background:rgba(244,178,60,.15);color:var(--warn)}
+.insight.bad  .insight-icon{background:rgba(255,107,122,.15);color:var(--bad)}
+.insight.info .insight-icon{background:rgba(111,184,255,.15);color:var(--info)}
+.insight-title{font-weight:600;font-size:13px;margin-bottom:3px}
+.insight-text{margin:0;font-size:12.5px;color:var(--text-2);line-height:1.55}
+
+/* ============ MOBILE NAV ============ */
+.mob-nav{display:none}
+@media(max-width:900px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .mob-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--surface);
+    border-top:1px solid var(--hairline);padding:6px;z-index:50;justify-content:space-around;overflow-x:auto;
+  }
+  .mob-nav button{
+    background:transparent;border:none;color:var(--muted);padding:8px 10px;font-size:11px;
+    border-radius:8px;cursor:pointer;font-family:inherit;font-weight:500;flex-shrink:0;
+  }
+  .mob-nav button.active{background:rgba(123,167,255,.12);color:var(--text)}
+  main{padding:20px 14px 110px}
+  .topbar{padding:12px 14px}
+  .filterbar{padding:10px 14px}
+}
 </style>
 </head>
 <body>
@@ -402,67 +267,50 @@ tbody tr.row-bad td{background:rgba(255,107,122,.04)}
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-mark">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M2 12L6 8L9 11L14 4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
+      <div class="brand-mark">RG</div>
       <div>
-        <div class="brand-name">Rank Lens</div>
-        <div class="brand-sub">Allocation analytics</div>
+        <div class="brand-name">Rank Goals</div>
+        <div class="brand-sub">School × Language allocation</div>
       </div>
     </div>
-
-    <div class="nav-section">Analyze</div>
-    <button class="nav-btn active" data-tab="exec">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M3 12l2-2 4 4 8-8 4 4"/><path d="M21 6v6h-6"/></svg>
-      Executive overview
+    <div class="nav-group">Goals</div>
+    <button class="nav-btn active" data-tab="home">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 9l6-6 6 6M3 8v6h10V8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Goal heatmap
     </button>
-    <button class="nav-btn" data-tab="seg">
-      <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      Segments
+    <button class="nav-btn" data-tab="gaps">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 13h12M2 9h12M2 5h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Gap ranking
     </button>
-    <button class="nav-btn" data-tab="alloc">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><circle cx="3" cy="17" r="1.5"/><circle cx="9" cy="11" r="1.5"/><circle cx="13" cy="15" r="1.5"/><circle cx="21" cy="7" r="1.5"/></svg>
-      Rank allocation
-    </button>
-    <button class="nav-btn" data-tab="reps">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
-      Representatives
-    </button>
-    <button class="nav-btn" data-tab="opt">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/></svg>
-      Optimization
+    <button class="nav-btn" data-tab="detail">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Trend & detail
     </button>
 
-    <div class="nav-section">Reference</div>
+    <div class="nav-group">Reference</div>
     <button class="nav-btn" data-tab="logic">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M9 17l-3-3 3-3M15 7l3 3-3 3"/><path d="M14 4l-4 16"/></svg>
-      Rank logic
-    </button>
-    <button class="nav-btn" data-tab="data">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/><path d="M12 7v5l3 2"/></svg>
-      Data quality
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l6 3v4c0 4-2.7 6-6 6-3.3 0-6-2-6-6v-4l6-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      Method & rank logic
     </button>
 
-    <div class="nav-spacer"></div>
-    <div class="nav-foot">Names pseudonymized • Rank 1 = weakest, Rank 4 = strongest</div>
+    <div class="sidebar-foot">
+      Rank 1 = weakest · Rank 4 = strongest. Goals = average %&nbsp;R3+R4 in the top-25% SOV months.
+    </div>
   </aside>
 
-  <!-- MAIN -->
+  <!-- MAIN PANE -->
   <div>
-    <!-- TOP BAR -->
     <div class="topbar">
-      <div class="topbar-l">
-        <h1 id="topTitle">Executive overview</h1>
+      <div>
+        <h1 id="topTitle">Goal heatmap</h1>
         <div class="topbar-meta" id="topMeta">Loading…</div>
       </div>
       <div class="topbar-r">
-        <span class="chip"><span class="chip-dot"></span><span id="liveChip">Live</span></span>
-        <div class="filter-cluster">
-          <label class="filter-label">From</label>
+        <span class="chip"><span class="chip-dot"></span>Live</span>
+        <div class="filter-group">
+          <span class="filter-label">From</span>
           <select id="dateFrom" class="select select-sm"></select>
-          <label class="filter-label">To</label>
+          <span class="filter-label">To</span>
           <select id="dateTo" class="select select-sm"></select>
           <div class="seg seg-sm" id="datePreset">
             <button data-p="all" class="active">All</button>
@@ -472,1170 +320,834 @@ tbody tr.row-bad td{background:rgba(255,107,122,.04)}
             <button data-p="3m">3M</button>
           </div>
         </div>
-        <select id="globalSeg" class="select"><option value="">All segments</option></select>
-        <select id="globalRankType" class="select">
-          <option value="seg_rank_calls">Rank by calls</option>
-          <option value="seg_rank_contacted">Rank by contacted</option>
-        </select>
+        <select id="schoolSel" class="select"></select>
+        <select id="langSel" class="select"></select>
         <button id="resetFilters" class="btn-reset" title="Clear all filters">↺ Reset</button>
       </div>
     </div>
-    <div class="filterbar" id="filterBar">
-      <span class="filterbar-label">Active filters:</span>
-      <div id="filterChips" class="filterbar-chips"></div>
+
+    <div class="filterbar empty" id="filterBar">
+      <span class="filterbar-label">Active</span>
+      <div id="filterChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
       <span class="filterbar-summary" id="filterSummary"></span>
     </div>
 
     <main>
-      <!-- ============= EXECUTIVE ============= -->
-      <section id="exec" class="page active">
+      <!-- ============= HOME (HEATMAP) ============= -->
+      <section id="home" class="page active">
         <div class="page-head">
           <div>
-            <h2 class="page-title">Where is revenue actually being made?</h2>
-            <p class="page-sub">Top-line KPIs across every segment. Rank 1 is the weakest rank in the model; Rank 4 is the strongest. The dashboard always validates rank conclusions against actual SOV, orders, and acquisitions.</p>
-          </div>
-          <div class="row">
-            <span class="pill pill-info">12 KPIs</span>
-            <span class="pill pill-mute">Pseudonymized</span>
-          </div>
-        </div>
-        <div class="grid grid-kpi" id="kpiGrid"></div>
-
-        <div class="grid grid-12" style="margin-top:18px">
-          <div class="card col-7">
-            <div class="card-head">
-              <div>
-                <h3 class="card-title">Volume vs. revenue contribution</h3>
-                <p class="card-hint">Each segment's share of calls and contacts compared to its share of SOV and orders. A wide gap means resources may be misaligned.</p>
-              </div>
-              <div class="seg" id="execMode">
-                <button class="active" data-mode="share">Share</button>
-                <button data-mode="abs">Absolute</button>
-              </div>
-            </div>
-            <div id="execChart1" class="chart"></div>
-          </div>
-          <div class="card col-5">
-            <div class="card-head">
-              <div>
-                <h3 class="card-title">Efficiency by rank — does the model hold?</h3>
-                <p class="card-hint">SOV per call across all segments combined. The line is orders per call.</p>
-              </div>
-            </div>
-            <div id="execChart2" class="chart"></div>
+            <h2 class="page-title">Are we hitting our R3+R4 allocation goal?</h2>
+            <p class="page-sub">
+              Each cell = one school × language combo. The <strong>goal</strong> is what %&nbsp;R3+R4 looked like in the
+              top-25% SOV months (the months that actually made revenue). Color = how far the current period is from that goal.
+              Green = at-or-above goal · Red = behind goal · Grey = no data.
+            </p>
           </div>
         </div>
 
-        <div class="card" style="margin-top:18px">
+        <div class="kpi-row" id="kpiRow"></div>
+
+        <div class="card">
           <div class="card-head">
             <div>
-              <h3 class="card-title">Headline insights</h3>
-              <p class="card-hint">Auto-generated from the data — refreshed whenever data.json updates.</p>
+              <h3 class="card-title">Heatmap · Actual vs Goal</h3>
+              <p class="card-hint">Click any cell for the full school × language breakdown. The dot in the top-right corner means thin sample (low confidence).</p>
+            </div>
+            <div class="metric-toggle" id="heatMetric">
+              <button class="active" data-m="calls">% Calls to R3+R4</button>
+              <button data-m="contacts">% Contacted to R3+R4</button>
             </div>
           </div>
-          <div id="headlines"></div>
-        </div>
-      </section>
-
-      <!-- ============= SEGMENTS ============= -->
-      <section id="seg" class="page">
-        <div class="page-head">
-          <div>
-            <h2 class="page-title">Segment performance</h2>
-            <p class="page-sub">Click any segment row to drill into its rank breakdown and representatives.</p>
+          <div class="heatmap-wrap" id="heatmapWrap"></div>
+          <div class="heatmap-legend">
+            <span>Behind goal</span>
+            <span class="legend-grad"></span>
+            <span>Above goal</span>
+            <span style="margin-left:18px;display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:var(--warn);display:inline-block"></span>Low confidence (&lt;500 calls in period)</span>
           </div>
         </div>
 
-        <div class="grid grid-12">
-          <div class="card col-12">
-            <div class="card-head">
-              <h3 class="card-title">All segments — click a row to drill in</h3>
-              <p class="card-hint">Sortable. Hover to highlight.</p>
-            </div>
-            <div id="segTableWrap"></div>
+        <div class="grid grid-2" style="margin-top:16px">
+          <div class="card">
+            <div class="card-head"><div><h3 class="card-title">Top 5 biggest gaps</h3><p class="card-hint">Combos furthest below the R3+R4 calls goal.</p></div></div>
+            <div id="topGaps"></div>
           </div>
-        </div>
-
-        <div class="grid grid-12" style="margin-top:18px">
-          <div class="card col-6">
-            <div class="card-head"><h3 class="card-title">SOV by segment</h3></div>
-            <div id="segChart1" class="chart"></div>
-          </div>
-          <div class="card col-6">
-            <div class="card-head"><h3 class="card-title">Calls vs contacted customers</h3></div>
-            <div id="segChart2" class="chart"></div>
-          </div>
-          <div class="card col-6">
-            <div class="card-head"><h3 class="card-title">Orders by segment</h3></div>
-            <div id="segChart3" class="chart"></div>
-          </div>
-          <div class="card col-6">
-            <div class="card-head"><h3 class="card-title">First-time acquisitions by segment</h3></div>
-            <div id="segChart4" class="chart"></div>
+          <div class="card">
+            <div class="card-head"><div><h3 class="card-title">Top 5 strongest performers</h3><p class="card-hint">Combos already at-or-above goal — keep doing what's working.</p></div></div>
+            <div id="topWins"></div>
           </div>
         </div>
       </section>
 
-      <!-- ============= ALLOCATION ============= -->
-      <section id="alloc" class="page">
+      <!-- ============= GAPS RANKING ============= -->
+      <section id="gaps" class="page">
         <div class="page-head">
           <div>
-            <h2 class="page-title">Rank allocation</h2>
-            <p class="page-sub">Compare each rank's share of calls and contacts against its share of revenue. Gaps reveal where to shift volume.</p>
+            <h2 class="page-title">Gap ranking · biggest opportunities first</h2>
+            <p class="page-sub">Every school × language combo with a goal, sorted by call-share gap. Click a row to drill in.</p>
           </div>
         </div>
-
-        <div class="controls">
-          <label>Segment</label>
-          <select id="allocSeg" class="select"></select>
-          <label>Compare</label>
-          <div class="seg" id="allocMetric">
-            <button class="active" data-metric="SOVShare">vs SOV</button>
-            <button data-metric="OrderShare">vs Orders</button>
-            <button data-metric="AcqShare">vs Acquisitions</button>
-          </div>
-        </div>
-
-        <div class="grid grid-12">
-          <div class="card col-7">
-            <div class="card-head">
-              <h3 class="card-title">Allocation balance</h3>
-              <p class="card-hint">Bars show share of each metric, by rank. The wider the gap between the call bar and the SOV bar, the more imbalanced.</p>
-            </div>
-            <div id="allocChart1" class="chart-tall"></div>
-          </div>
-          <div class="card col-5">
-            <div class="card-head">
-              <h3 class="card-title">Efficiency by rank</h3>
-              <p class="card-hint">Bars: SOV per call. Line: orders per call.</p>
-            </div>
-            <div id="allocChart2" class="chart-tall"></div>
-          </div>
-        </div>
-
-        <div class="grid grid-12" style="margin-top:18px">
-          <div class="card col-12">
-            <div class="card-head">
-              <h3 class="card-title">Segment × Rank breakdown</h3>
-              <p class="card-hint">Action column shows whether each rank is over- or under-allocated calls relative to its revenue share.</p>
-            </div>
-            <div id="allocTableWrap"></div>
-          </div>
-          <div class="card col-12">
-            <div class="card-head"><h3 class="card-title">Diagnostic</h3></div>
-            <div id="allocCallouts"></div>
-          </div>
+        <div class="card">
+          <div id="gapTableWrap"></div>
         </div>
       </section>
 
-      <!-- ============= REPS ============= -->
-      <section id="reps" class="page">
+      <!-- ============= DETAIL ============= -->
+      <section id="detail" class="page">
         <div class="page-head">
           <div>
-            <h2 class="page-title">Representative performance</h2>
-            <p class="page-sub">Reps within the same segment only. Names are pseudonymized as Rep-XXXXXX. Click a row for full detail.</p>
+            <h2 class="page-title">Trend & detail</h2>
+            <p class="page-sub">Pick a school and language above to see the monthly history. Goal lines are computed from the top-25% SOV months in the visible date window.</p>
           </div>
         </div>
-
-        <div class="controls">
-          <label>Segment</label><select id="repSeg" class="select"></select>
-          <label>Min calls</label><select id="minCalls" class="select"><option value="0">All</option><option value="200">200+</option><option value="1000" selected>1,000+</option><option value="5000">5,000+</option></select>
-          <label>Confidence</label>
-          <div class="seg" id="confSeg"><button class="active" data-c="all">All</button><button data-c="High">High</button><button data-c="Medium">Medium+</button></div>
-          <label>Search</label>
-          <input id="repSearch" class="search-input" placeholder="Filter rep…">
-        </div>
-
-        <div class="grid grid-12">
-          <div class="card col-7">
-            <div class="card-head">
-              <h3 class="card-title">SOV per call vs. call volume</h3>
-              <p class="card-hint">Top-right = strong &amp; high-volume (exploit). Top-left = strong but under-tested (give more). Bottom-right = high-volume but inefficient (coach).</p>
-            </div>
-            <div id="repScatter" class="chart-tall"></div>
-          </div>
-          <div class="card col-5">
-            <div class="card-head"><h3 class="card-title">Top reps by orders per call</h3></div>
-            <div id="repBars" class="chart-tall"></div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:18px">
-          <div class="card-head">
-            <h3 class="card-title">Representative table</h3>
-            <p class="card-hint">Sort any column. Click a row for the full rep profile.</p>
-          </div>
-          <div id="repTableWrap"></div>
-        </div>
-      </section>
-
-      <!-- ============= OPT ============= -->
-      <section id="opt" class="page">
-        <div class="page-head">
-          <div>
-            <h2 class="page-title">Optimization opportunities</h2>
-            <p class="page-sub">Where to shift calls and contacts to lift SOV, orders, and acquisitions — with hard caps to prevent runaway concentration.</p>
-          </div>
-        </div>
-
-        <div class="grid grid-12">
-          <div class="card col-12">
-            <div class="card-head">
-              <h3 class="card-title">Recommended call shifts (Segment × Rank)</h3>
-              <p class="card-hint">Shift = SOV share − Call share. Positive (green) = under-allocated, give more. Negative (red) = over-allocated, shift away.</p>
-            </div>
-            <div id="shiftTableWrap"></div>
-          </div>
-        </div>
-
-        <div class="grid grid-12" style="margin-top:18px">
-          <div class="card col-6">
-            <div class="card-head">
-              <h3 class="card-title">High-potential reps</h3>
-              <p class="card-hint">Below-median calls + above-segment-average SOV/call efficiency. Test more volume here.</p>
-            </div>
-            <div id="hpTable"></div>
-          </div>
-          <div class="card col-6">
-            <div class="card-head">
-              <h3 class="card-title">Over-exposed reps</h3>
-              <p class="card-hint">Above-median calls + below-segment-average SOV/call efficiency. Coach or reduce volume.</p>
-            </div>
-            <div id="oeTable"></div>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:18px">
-          <div class="card-head">
-            <h3 class="card-title">Recommended allocation framework</h3>
-            <p class="card-hint">Defaults that balance exploitation, development, and exploration.</p>
-          </div>
-          <div class="grid grid-3" style="gap:14px">
-            <div class="kpi" style="border-left:3px solid var(--good)">
-              <div class="kpi-label">Exploit · 70%</div>
-              <div class="kpi-value" style="font-size:22px">Proven winners</div>
-              <div class="kpi-sub">R3 + R4 reps with positive SOV/call lift &amp; High confidence</div>
-            </div>
-            <div class="kpi" style="border-left:3px solid var(--warn)">
-              <div class="kpi-label">Develop · 20%</div>
-              <div class="kpi-value" style="font-size:22px">Promising</div>
-              <div class="kpi-sub">R2 reps and R3/R4 with neutral lift but rising trend</div>
-            </div>
-            <div class="kpi" style="border-left:3px solid var(--info)">
-              <div class="kpi-label">Explore · 10%</div>
-              <div class="kpi-value" style="font-size:22px">Test &amp; new reps</div>
-              <div class="kpi-sub">R1 reps + IsBelow2Months · min 200 calls / 30 contacts each</div>
-            </div>
-          </div>
-          <div class="divider"></div>
-          <div class="grid grid-2">
-            <div>
-              <h4 style="margin:0 0 8px;font-size:13px;color:var(--text-2)">Hard caps</h4>
-              <ul style="margin:0;padding-left:18px;color:var(--text-2);font-size:13px;line-height:1.7">
-                <li>No rank may exceed <strong>40%</strong> of segment calls unless its SOV/call lift over the next-best rank is ≥ <strong>50%</strong></li>
-                <li>No rep may exceed <strong>15%</strong> of segment calls unless lift ≥ 50% AND confidence = High</li>
-                <li>Each rank receives ≥ <strong>5%</strong> of calls AND each rep ≥ <strong>30 contacted customers</strong> per 10-week window</li>
-              </ul>
-            </div>
-            <div>
-              <h4 style="margin:0 0 8px;font-size:13px;color:var(--text-2)">Re-rank cadence</h4>
-              <ul style="margin:0;padding-left:18px;color:var(--text-2);font-size:13px;line-height:1.7">
-                <li>Re-rank weekly (Sunday) on the rolling <strong>10-week</strong> window</li>
-                <li>Add a minimum-volume floor: rank = -1 if NumOfContacted &lt; 20 OR NumOfCalls &lt; 100</li>
-                <li>Add a SOV-weighted variant alongside reg-weighted ranks</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        <div id="detailContent"></div>
       </section>
 
       <!-- ============= LOGIC ============= -->
       <section id="logic" class="page">
-        <div class="page-head">
-          <div>
-            <h2 class="page-title">Rank logic &amp; method</h2>
-            <p class="page-sub">How RankRegFromContacted and RankRegFromCalls are computed in the data warehouse.</p>
-          </div>
-        </div>
-
-        <div class="grid grid-12">
-          <div class="card col-7">
-            <div class="card-head"><h3 class="card-title">vw_kpi_employee_rank — what it does</h3></div>
-            <div style="font-size:13.5px;color:var(--text-2);line-height:1.7">
-              <p>The view UNIONs five fact tables — <span class="mono" style="color:var(--accent)">fact_Leads</span> (contacts), <span class="mono" style="color:var(--accent)">fact_Acquisitions</span>, <span class="mono" style="color:var(--accent)">fact_Orders</span>, <span class="mono" style="color:var(--accent)">fact_SAP</span> (upsales), and <span class="mono" style="color:var(--accent)">fact_CallCenterCalls</span> — at day × semester × language × employee grain, aggregates them to one weekly <strong>RankDate</strong> (each Sunday), and joins the rank that the employee held that Sunday from <span class="mono" style="color:var(--accent)">HelpDB.PowerBI.fact_EmployeesRank_NewLogic</span>.</p>
-              <p>Two ranks are attached to every row:</p>
-              <ul>
-                <li><strong>RankRegFromContacted</strong> — quartile rank by registrations / contacted customers in the segment.</li>
-                <li><strong>RankRegFromCalls</strong> — quartile rank by registrations / calls in the segment.</li>
-              </ul>
-              <p><span class="mono" style="color:var(--warn)">-1</span> means the rep had zero contacts/calls that week (treated as <em>unranked</em>). NULL means the rep was not in <span class="mono">fact_EmployeesRank</span> that Sunday.</p>
-            </div>
-          </div>
-          <div class="card col-5">
-            <div class="card-head"><h3 class="card-title">How the quartile is assigned</h3></div>
-            <ol style="font-size:13.5px;color:var(--text-2);line-height:1.7;padding-left:18px;margin:0">
-              <li>For each Sunday, look back <strong>10 weeks</strong> per Employee × Category × Language.</li>
-              <li>Compute <span class="mono" style="color:var(--accent)">RegFromContacted = Reg / Contacted</span> and <span class="mono" style="color:var(--accent)">RegFromCalls = Reg / Calls</span>.</li>
-              <li>Within each (Date, Category, Language) group, sort by ratio. Run a <strong>volume-weighted cumulative quartile</strong>: position = (CumulativeVolume − ThisVolume/2) / TotalVolume. ≤25% → R1, ≤50% → R2, ≤75% → R3, &gt;75% → R4.</li>
+        <div class="page-head"><div><h2 class="page-title">Method & rank logic</h2></div></div>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3 class="card-title">How the rank is assigned</h3>
+            <div class="divider"></div>
+            <ol style="line-height:1.8;color:var(--text-2);font-size:13.5px;padding-left:20px;margin:0">
+              <li>For each Sunday, look back <strong>10 weeks</strong> per Employee × School × Language.</li>
+              <li>Compute <code>RegFromContacted = Reg / Contacted</code> and <code>RegFromCalls = Reg / Calls</code>.</li>
+              <li>Within each (Date, School, Language) group, sort by ratio and assign a <strong>volume-weighted quartile</strong>: ≤25% → R1, ≤50% → R2, ≤75% → R3, &gt;75% → R4.</li>
+              <li>Rank 1 = <strong>weakest</strong>, Rank 4 = <strong>strongest</strong>.</li>
             </ol>
           </div>
-          <div class="card col-12">
-            <div class="card-head"><h3 class="card-title">What the rank rewards — and where it can mislead</h3></div>
-            <div class="grid grid-2">
-              <div>
-                <h4 style="margin:0 0 6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Strengths</h4>
-                <ul style="margin:0;padding-left:18px;color:var(--text-2);font-size:13px;line-height:1.7">
-                  <li>Simple, transparent quartile across (segment × language)</li>
-                  <li>Volume-weighted cut prevents tiny-sample reps from dominating R4</li>
-                  <li>10-week look-back smooths short-term variance</li>
-                </ul>
-              </div>
-              <div>
-                <h4 style="margin:0 0 6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Risks</h4>
-                <ul style="margin:0;padding-left:18px;color:var(--text-2);font-size:13px;line-height:1.7">
-                  <li>Ignores SOV per order — a rep can be R4 on count but low on revenue</li>
-                  <li>Self-reinforcing: R4 reps get more leads → numerator inflates</li>
-                  <li>No minimum-volume floor — micro-volume reps can land in R4</li>
-                  <li>New reps (IsBelow2Months) skewed low until window fills</li>
-                </ul>
-              </div>
-            </div>
+          <div class="card">
+            <h3 class="card-title">How the goal is computed</h3>
+            <div class="divider"></div>
+            <ol style="line-height:1.8;color:var(--text-2);font-size:13.5px;padding-left:20px;margin:0">
+              <li>For each school × language combo, find every month's actual SOV.</li>
+              <li>Take the <strong>top 25% of months by SOV</strong> — the months that actually made revenue.</li>
+              <li>The <strong>goal %&nbsp;calls to R3+R4</strong> = average %&nbsp;R3+R4 calls in those top months.</li>
+              <li>Same for contacts: <strong>goal %&nbsp;contacted to R3+R4</strong> = avg %&nbsp;R3+R4 contacts in top months.</li>
+              <li>Combos with &lt; 500 calls in the period are flagged <em>low confidence</em>.</li>
+            </ol>
           </div>
-        </div>
-      </section>
-
-      <!-- ============= DATA QUALITY ============= -->
-      <section id="data" class="page">
-        <div class="page-head">
-          <div>
-            <h2 class="page-title">Data quality &amp; sample-size confidence</h2>
-            <p class="page-sub">Use this page to know when to trust a rep-level conclusion and when to flag insufficient testing volume.</p>
+          <div class="card">
+            <h3 class="card-title">What this avoids</h3>
+            <div class="divider"></div>
+            <ul style="line-height:1.8;color:var(--text-2);font-size:13.5px;padding-left:20px;margin:0">
+              <li>Doesn't assume "more R4 = always better" — the goal comes from your <strong>own</strong> good months.</li>
+              <li>Doesn't penalize R1/R2/R3 for being R1/R2/R3 — only the <strong>allocation %</strong> matters.</li>
+              <li>Won't declare a thin combo "broken" — sample-size guardrail at 500 calls.</li>
+              <li>Doesn't hard-code one number across all schools — every combo gets its own goal.</li>
+            </ul>
           </div>
-        </div>
-
-        <div class="grid grid-12">
-          <div class="card col-7">
-            <div class="card-head">
-              <h3 class="card-title">Confidence distribution by segment</h3>
-              <p class="card-hint">Rep × segment cells. High = ≥ 1,000 calls AND ≥ 100 contacted customers in the period.</p>
-            </div>
-            <div id="confChart" class="chart"></div>
-          </div>
-          <div class="card col-5">
-            <div class="card-head"><h3 class="card-title">Confidence rules</h3></div>
-            <table>
-              <thead><tr><th>Tier</th><th class="num">Calls</th><th class="num">Contacted</th><th>Rule</th></tr></thead>
-              <tbody>
-                <tr><td><span class="pill pill-bad">Low</span></td><td class="num">&lt; 200</td><td class="num">&lt; 30</td><td>Don't conclude</td></tr>
-                <tr><td><span class="pill pill-warn">Medium</span></td><td class="num">200-1k</td><td class="num">30-100</td><td>Directional only</td></tr>
-                <tr><td><span class="pill pill-good">High</span></td><td class="num">≥ 1k</td><td class="num">≥ 100</td><td>Reliable</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="card col-12">
-            <div class="card-head"><h3 class="card-title">Source data summary</h3></div>
-            <div class="grid grid-3" id="dataMeta"></div>
+          <div class="card">
+            <h3 class="card-title">How to read a row</h3>
+            <div class="divider"></div>
+            <p style="color:var(--text-2);font-size:13.5px;line-height:1.7;margin:0 0 10px">
+              "Biblical · Hebrew · 38% calls / goal 52% / gap −14 pts · 12% contacts / goal 28% / gap −16 pts"
+            </p>
+            <p style="color:var(--muted);font-size:12.5px;line-height:1.7;margin:0">
+              Read: only 38% of calls are going to R3+R4 reps in this combo, but in your best-revenue months it was 52%.
+              You're 14 points behind the call-share goal and 16 points behind the contact-share goal.
+              Action: shift more volume to R3+R4 reps for Hebrew in the Biblical school.
+            </p>
           </div>
         </div>
       </section>
     </main>
+
+    <!-- MOBILE NAV -->
+    <nav class="mob-nav">
+      <button class="active" data-tab="home">Heatmap</button>
+      <button data-tab="gaps">Gaps</button>
+      <button data-tab="detail">Detail</button>
+      <button data-tab="logic">Logic</button>
+    </nav>
   </div>
 </div>
 
-<!-- DRAWER (drill-down for segment / rep) -->
+<!-- DRAWER -->
 <div class="drawer-mask" id="drawerMask"></div>
-<div class="drawer" id="drawer">
+<aside class="drawer" id="drawer">
   <div class="drawer-head">
-    <h3 class="drawer-title" id="drawerTitle">Detail</h3>
-    <button class="drawer-close" onclick="closeDrawer()">Close ✕</button>
+    <div class="drawer-title" id="drawerTitle">Detail</div>
+    <button class="drawer-close" id="drawerClose">Close ✕</button>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
-</div>
-
-<!-- MOBILE NAV -->
-<div class="mob-nav">
-  <button class="active" data-tab="exec">Exec</button>
-  <button data-tab="seg">Segments</button>
-  <button data-tab="alloc">Allocation</button>
-  <button data-tab="reps">Reps</button>
-  <button data-tab="opt">Optimize</button>
-  <button data-tab="logic">Logic</button>
-  <button data-tab="data">Data</button>
-</div>
+</aside>
 
 <script>
-/* ============== HELPERS ============== */
+/* ============ HELPERS ============ */
 const fmt = {
-  num: n => n==null||isNaN(n)?'—':Number(n).toLocaleString(undefined,{maximumFractionDigits:0}),
-  num2: n => n==null||isNaN(n)?'—':Number(n).toLocaleString(undefined,{maximumFractionDigits:2}),
-  pct: n => n==null||isNaN(n)?'—':Number(n).toFixed(1)+'%',
-  pct2: n => n==null||isNaN(n)?'—':Number(n).toFixed(2)+'%',
+  num: n => n==null||isNaN(n)?'—':Math.round(n).toLocaleString(),
+  pct: n => n==null||isNaN(n)?'—':n.toFixed(1)+'%',
+  pct0: n => n==null||isNaN(n)?'—':n.toFixed(0)+'%',
   money: n => {
     if(n==null||isNaN(n))return '—';
     const a=Math.abs(n);
     if(a>=1e6) return '$'+(n/1e6).toFixed(2)+'M';
     if(a>=1e3) return '$'+(n/1e3).toFixed(1)+'K';
-    return '$'+Number(n).toFixed(0);
+    return '$'+Math.round(n);
   },
-  money2: n => n==null||isNaN(n)?'—':'$'+Number(n).toFixed(2)
+  signedPts: n => (n==null||isNaN(n))?'—':((n>=0?'+':'')+n.toFixed(1)+' pts'),
+  monthName: m => {
+    const [y,mo]=m.split('-');
+    return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+' '+y.slice(2);
+  }
 };
-const RANK_COLORS = {R1:'#FF6B7A',R2:'#F4B23C',R3:'#6FB8FF',R4:'#56D9A6'};
-const PALETTE = ['#7BA7FF','#A78BFA','#56D9A6','#F4B23C','#FF6B7A','#6FB8FF','#F0ABFC','#FFC553'];
 const PLOTLY_LAYOUT = {
   paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
   font:{color:'#C7CCD6',family:'Inter,sans-serif',size:12},
-  margin:{l:55,r:18,t:18,b:48},
-  xaxis:{gridcolor:'#262B38',zerolinecolor:'#262B38',linecolor:'#262B38',tickfont:{color:'#8A92A3'},titlefont:{color:'#8A92A3'}},
-  yaxis:{gridcolor:'#262B38',zerolinecolor:'#262B38',linecolor:'#262B38',tickfont:{color:'#8A92A3'},titlefont:{color:'#8A92A3'}},
+  margin:{l:55,r:18,t:18,b:46},
+  xaxis:{gridcolor:'#262B38',zerolinecolor:'#262B38',linecolor:'#262B38',tickfont:{color:'#8A92A3'}},
+  yaxis:{gridcolor:'#262B38',zerolinecolor:'#262B38',linecolor:'#262B38',tickfont:{color:'#8A92A3'}},
   legend:{bgcolor:'rgba(0,0,0,0)',font:{color:'#C7CCD6'},orientation:'h',y:-0.18,x:0},
   hoverlabel:{bgcolor:'#181C25',bordercolor:'#323847',font:{color:'#F2F4F8',family:'Inter,sans-serif'}}
 };
 const PLOTLY_CONFIG = {displayModeBar:false, responsive:true};
+const LOW_CONF_CALLS = 500;
+const TOP_QUARTILE_FRACTION = 0.25;
+const PAGE_TITLES = {home:'Goal heatmap', gaps:'Gap ranking', detail:'Trend & detail', logic:'Method & rank logic'};
 
-/* ============== STATE ============== */
-let RAW;        // raw {meta, facts}
-let DATA;       // aggregated {totals, segments, seg_rank_calls, seg_rank_contacted, employees}
+/* ============ STATE ============ */
+let RAW;
 let STATE = {
-  globalSeg: '',
-  rankType: 'seg_rank_calls',
-  dateFrom: '',
-  dateTo: '',
-  datePreset: 'all',
-  execMode: 'share',
-  allocMetric: 'SOVShare',
-  allocSeg: '',
-  repSeg: '',
-  minCalls: 1000,
-  conf: 'all',
-  search: '',
-  sort: {table:'reps', col:'SOV', dir:'desc'}
-};
-const PAGE_TITLES = {
-  exec:'Executive overview', seg:'Segments', alloc:'Rank allocation',
-  reps:'Representatives', opt:'Optimization', logic:'Rank logic', data:'Data quality'
+  dateFrom:'', dateTo:'', datePreset:'all',
+  school:'', language:'',
+  heatMetric:'calls', // 'calls' or 'contacts'
+  detailSchool:'', detailLanguage:'',
+  _sort:{}
 };
 
-/* ============== AGGREGATION ENGINE ============== */
-// Filter facts by current state and rebuild DATA.* in the legacy shape.
-function recomputeData(){
-  const facts = RAW.facts;
-  const dFrom = STATE.dateFrom, dTo = STATE.dateTo;
-  const segFilter = STATE.globalSeg;
-  const filtered = facts.filter(f=>
-    (!dFrom || f.m>=dFrom) && (!dTo || f.m<=dTo) && (!segFilter || f.s===segFilter)
-  );
-
-  // Helper: empty agg cell
-  const emptyAgg = ()=>({Calls:0,Contacted:0,Orders:0,Acquisitions:0,SOV:0,Upsales:0});
-  const addRow = (a,f)=>{a.Calls+=f.c;a.Contacted+=f.ct;a.Orders+=f.o;a.Acquisitions+=f.a;a.SOV+=f.v;a.Upsales+=f.u;};
-
-  // ---------- TOTALS ----------
-  const totals = emptyAgg();
-  const repsSet = new Set();
-  filtered.forEach(f=>{addRow(totals,f); repsSet.add(f.r);});
-  totals.UniqueReps = repsSet.size;
-  totals.DateMin = STATE.dateFrom || RAW.meta.DateMin;
-  totals.DateMax = STATE.dateTo ? lastDayOf(STATE.dateTo) : RAW.meta.DateMax;
-
-  // ---------- SEGMENTS ----------
-  const segMap = {};
-  filtered.forEach(f=>{
-    if(!segMap[f.s]){segMap[f.s]=emptyAgg(); segMap[f.s].UniqueEmpSet=new Set();}
-    addRow(segMap[f.s],f);
-    segMap[f.s].UniqueEmpSet.add(f.r);
-  });
-  const segments = Object.keys(segMap).sort().map(k=>{
-    const o = segMap[k];
-    return {SemesterCategory:k,Calls:o.Calls,Contacted:o.Contacted,Orders:o.Orders,Acquisitions:o.Acquisitions,SOV:o.SOV,Upsales:o.Upsales,UniqueEmp:o.UniqueEmpSet.size};
-  });
-
-  // ---------- SEG × RANK (calls) ----------
-  const buildSegRank = (rankKey, outRankField)=>{
-    const m = {};
-    filtered.forEach(f=>{
-      const r = f[rankKey];
-      if(!['R1','R2','R3','R4'].includes(r)) return;
-      const key = f.s+'|'+r;
-      if(!m[key]){m[key]={SemesterCategory:f.s,[outRankField]:r,...emptyAgg(),UniqueEmpSet:new Set()};}
-      addRow(m[key],f); m[key].UniqueEmpSet.add(f.r);
-    });
-    // Compute per-segment denominators (only valid-rank rows)
-    const segDen = {};
-    Object.values(m).forEach(o=>{
-      if(!segDen[o.SemesterCategory]) segDen[o.SemesterCategory]=emptyAgg();
-      addRow(segDen[o.SemesterCategory],{c:o.Calls,ct:o.Contacted,o:o.Orders,a:o.Acquisitions,v:o.SOV,u:o.Upsales});
-    });
-    return Object.values(m).map(o=>{
-      const d = segDen[o.SemesterCategory];
-      return {
-        SemesterCategory:o.SemesterCategory,[outRankField]:o[outRankField],
-        Calls:o.Calls,Contacted:o.Contacted,Orders:o.Orders,Acquisitions:o.Acquisitions,SOV:o.SOV,Upsales:o.Upsales,
-        UniqueEmp:o.UniqueEmpSet.size,
-        CallShare:d.Calls?100*o.Calls/d.Calls:0,
-        ContactShare:d.Contacted?100*o.Contacted/d.Contacted:0,
-        OrderShare:d.Orders?100*o.Orders/d.Orders:0,
-        SOVShare:d.SOV?100*o.SOV/d.SOV:0,
-        AcqShare:d.Acquisitions?100*o.Acquisitions/d.Acquisitions:0,
-        SOVperCall:o.Calls?o.SOV/o.Calls:0,
-        OrdersPerCall:o.Calls?100*o.Orders/o.Calls:0,
-        SOVperContact:o.Contacted?o.SOV/o.Contacted:0,
-        OrdersPerContact:o.Contacted?100*o.Orders/o.Contacted:0,
-        AcqPerCall:o.Calls?100*o.Acquisitions/o.Calls:0,
-        AcqPerContact:o.Contacted?100*o.Acquisitions/o.Contacted:0,
-      };
-    });
-  };
-  const seg_rank_calls = buildSegRank('rc','RankCalls');
-  const seg_rank_contacted = buildSegRank('ro','RankCont');
-
-  // ---------- EMPLOYEES (per rep × segment) ----------
-  const empMap = {};
-  filtered.forEach(f=>{
-    const key = f.r+'|'+f.s;
-    if(!empMap[key]){
-      empMap[key]={Rep:f.r,SemesterCategory:f.s,...emptyAgg(),
-        _rankCallsW:0,_rankCallsN:0,_rankContW:0,_rankContN:0};
-    }
-    addRow(empMap[key],f);
-    // Volume-weighted avg ranks (weighted by Calls / Contacted respectively)
-    const rcN = parseInt((f.rc||'').slice(1));
-    const roN = parseInt((f.ro||'').slice(1));
-    if(rcN>=1 && rcN<=4){empMap[key]._rankCallsW += rcN*f.c; empMap[key]._rankCallsN += f.c;}
-    if(roN>=1 && roN<=4){empMap[key]._rankContW += roN*f.ct; empMap[key]._rankContN += f.ct;}
-  });
-  // Segment-level baselines for lift calc
-  const segBase = {};
-  segments.forEach(s=>{
-    segBase[s.SemesterCategory] = {sovPerCall:s.Calls?s.SOV/s.Calls:0, ordPerCall:s.Calls?100*s.Orders/s.Calls:0};
-  });
-  const employees = Object.values(empMap).map(o=>{
-    const sovPerCall = o.Calls?o.SOV/o.Calls:0;
-    const ordPerCall = o.Calls?100*o.Orders/o.Calls:0;
-    const base = segBase[o.SemesterCategory] || {sovPerCall:0,ordPerCall:0};
-    let conf = 'Low';
-    if(o.Calls>=1000 && o.Contacted>=100) conf='High';
-    else if(o.Calls>=200 && o.Contacted>=30) conf='Medium';
-    return {
-      Rep:o.Rep,SemesterCategory:o.SemesterCategory,
-      Calls:o.Calls,Contacted:o.Contacted,Orders:o.Orders,Acquisitions:o.Acquisitions,SOV:o.SOV,
-      AvgRankCalls: o._rankCallsN? o._rankCallsW/o._rankCallsN : null,
-      AvgRankCont:  o._rankContN ? o._rankContW/o._rankContN  : null,
-      SOVperCall:sovPerCall,
-      SOVperContact:o.Contacted?o.SOV/o.Contacted:0,
-      OrdersPerCall:ordPerCall,
-      OrdersPerContact:o.Contacted?100*o.Orders/o.Contacted:0,
-      AcqPerCall:o.Calls?100*o.Acquisitions/o.Calls:0,
-      Confidence:conf,
-      BaselineSOVperCall:base.sovPerCall,
-      BaselineOrdersPerCall:base.ordPerCall,
-      LiftSOVperCall:base.sovPerCall? 100*(sovPerCall/base.sovPerCall - 1) : null,
-      LiftOrdersPerCall:base.ordPerCall? 100*(ordPerCall/base.ordPerCall - 1) : null,
-    };
-  });
-
-  DATA = {totals, segments, seg_rank_calls, seg_rank_contacted, employees};
-}
-
-function lastDayOf(yyyymm){
-  const [y,m] = yyyymm.split('-').map(Number);
-  const d = new Date(y, m, 0); // day 0 of next month = last of this
-  return d.toISOString().slice(0,10);
-}
-
-function monthSub(monthStr, n){
-  // monthStr 'YYYY-MM', returns same format n months earlier
-  const [y,m] = monthStr.split('-').map(Number);
-  const d = new Date(Date.UTC(y, m-1-n, 1));
-  return d.toISOString().slice(0,7);
-}
-
-/* ============== INIT ============== */
+/* ============ LOAD ============ */
 fetch('data.json').then(r=>r.json()).then(d=>{RAW=d; init();}).catch(e=>{
-  document.body.innerHTML = '<div style="padding:40px;color:#FF6B7A;font-family:Inter">Failed to load data.json: '+e+'</div>';
+  document.body.innerHTML = `<div style="padding:40px;color:#FF6B7A;font-family:Inter">Failed to load data.json: ${e}</div>`;
 });
 
 function init(){
   const months = RAW.meta.Months;
-  const segs = RAW.meta.Segments;
-
-  // Populate date dropdowns
-  const monthOptions = months.map(m=>`<option value="${m}">${formatMonth(m)}</option>`).join('');
-  document.getElementById('dateFrom').innerHTML = monthOptions;
-  document.getElementById('dateTo').innerHTML = monthOptions;
+  // Date dropdowns
+  const monthOpts = months.map(m=>`<option value="${m}">${fmt.monthName(m)}</option>`).join('');
+  document.getElementById('dateFrom').innerHTML = monthOpts;
+  document.getElementById('dateTo').innerHTML = monthOpts;
   document.getElementById('dateFrom').value = months[0];
   document.getElementById('dateTo').value = months[months.length-1];
-  STATE.dateFrom = months[0];
-  STATE.dateTo = months[months.length-1];
+  STATE.dateFrom = months[0]; STATE.dateTo = months[months.length-1];
 
-  // Populate segment dropdowns
-  document.getElementById('globalSeg').innerHTML = '<option value="">All segments</option>'+segs.map(s=>`<option>${s}</option>`).join('');
-  document.getElementById('allocSeg').innerHTML = segs.map(s=>`<option>${s}</option>`).join('');
-  document.getElementById('repSeg').innerHTML = segs.map(s=>`<option>${s}</option>`).join('');
-  STATE.allocSeg = segs[0]; STATE.repSeg = segs[0];
+  // School / Language dropdowns
+  document.getElementById('schoolSel').innerHTML =
+    '<option value="">All schools</option>' + RAW.meta.Schools.map(s=>`<option>${s}</option>`).join('');
+  document.getElementById('langSel').innerHTML =
+    '<option value="">All languages</option>' + RAW.meta.Languages.map(l=>`<option>${l}</option>`).join('');
 
-  // Initial compute
-  recomputeData();
-  updateTopMeta();
-  updateFilterBar();
+  STATE.detailSchool = RAW.meta.Schools[0];
+  STATE.detailLanguage = RAW.meta.Languages[0];
 
-  /* Tab handlers */
+  // Tab switching
   document.querySelectorAll('.nav-btn,.mob-nav button').forEach(btn=>{
     btn.addEventListener('click', ()=>switchTab(btn.dataset.tab));
   });
 
-  /* Date filter handlers */
+  // Date filter handlers
   document.getElementById('dateFrom').addEventListener('change', e=>{
     STATE.dateFrom = e.target.value;
-    if(STATE.dateFrom > STATE.dateTo){STATE.dateTo = STATE.dateFrom; document.getElementById('dateTo').value = STATE.dateFrom;}
-    STATE.datePreset='custom'; updatePresetButtons();
-    applyFilters();
+    if(STATE.dateFrom > STATE.dateTo){ STATE.dateTo = STATE.dateFrom; document.getElementById('dateTo').value = STATE.dateFrom; }
+    STATE.datePreset='custom'; updatePresetButtons(); applyFilters();
   });
   document.getElementById('dateTo').addEventListener('change', e=>{
     STATE.dateTo = e.target.value;
-    if(STATE.dateTo < STATE.dateFrom){STATE.dateFrom = STATE.dateTo; document.getElementById('dateFrom').value = STATE.dateTo;}
-    STATE.datePreset='custom'; updatePresetButtons();
-    applyFilters();
+    if(STATE.dateTo < STATE.dateFrom){ STATE.dateFrom = STATE.dateTo; document.getElementById('dateFrom').value = STATE.dateTo; }
+    STATE.datePreset='custom'; updatePresetButtons(); applyFilters();
   });
   document.querySelectorAll('#datePreset button').forEach(b=>b.addEventListener('click', ()=>{
-    STATE.datePreset = b.dataset.p;
-    applyDatePreset();
-    updatePresetButtons();
-    applyFilters();
+    STATE.datePreset = b.dataset.p; applyDatePreset(); updatePresetButtons(); applyFilters();
   }));
 
-  /* Reset filters */
+  // School / Language
+  document.getElementById('schoolSel').addEventListener('change', e=>{STATE.school=e.target.value; applyFilters();});
+  document.getElementById('langSel').addEventListener('change', e=>{STATE.language=e.target.value; applyFilters();});
+
+  // Reset
   document.getElementById('resetFilters').addEventListener('click', ()=>{
     STATE.dateFrom = months[0]; STATE.dateTo = months[months.length-1];
-    STATE.globalSeg = ''; STATE.datePreset='all';
-    document.getElementById('dateFrom').value = STATE.dateFrom;
-    document.getElementById('dateTo').value = STATE.dateTo;
-    document.getElementById('globalSeg').value = '';
-    updatePresetButtons();
-    applyFilters();
+    STATE.school=''; STATE.language=''; STATE.datePreset='all';
+    document.getElementById('dateFrom').value = months[0];
+    document.getElementById('dateTo').value = months[months.length-1];
+    document.getElementById('schoolSel').value=''; document.getElementById('langSel').value='';
+    updatePresetButtons(); applyFilters();
   });
 
-  /* Global controls */
-  document.getElementById('globalSeg').addEventListener('change', e=>{STATE.globalSeg=e.target.value; applyFilters();});
-  document.getElementById('globalRankType').addEventListener('change', e=>{STATE.rankType=e.target.value; renderAll();});
+  // Heatmap metric toggle
+  document.querySelectorAll('#heatMetric button').forEach(b=>b.addEventListener('click', ()=>{
+    document.querySelectorAll('#heatMetric button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); STATE.heatMetric = b.dataset.m; renderHome();
+  }));
 
-  /* Page-specific controls */
-  document.querySelectorAll('#execMode button').forEach(b=>b.addEventListener('click',()=>{
-    document.querySelectorAll('#execMode button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
-    STATE.execMode = b.dataset.mode; renderExec();
-  }));
-  document.getElementById('allocSeg').addEventListener('change', e=>{STATE.allocSeg=e.target.value; renderAlloc();});
-  document.querySelectorAll('#allocMetric button').forEach(b=>b.addEventListener('click',()=>{
-    document.querySelectorAll('#allocMetric button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
-    STATE.allocMetric = b.dataset.metric; renderAlloc();
-  }));
-  document.getElementById('repSeg').addEventListener('change', e=>{STATE.repSeg=e.target.value; renderReps();});
-  document.getElementById('minCalls').addEventListener('change', e=>{STATE.minCalls=+e.target.value; renderReps();});
-  document.querySelectorAll('#confSeg button').forEach(b=>b.addEventListener('click',()=>{
-    document.querySelectorAll('#confSeg button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
-    STATE.conf = b.dataset.c; renderReps();
-  }));
-  document.getElementById('repSearch').addEventListener('input', e=>{STATE.search=e.target.value.toLowerCase(); renderReps();});
-
-  /* Drawer close */
+  // Drawer
   document.getElementById('drawerMask').addEventListener('click', closeDrawer);
-  document.addEventListener('keydown', e=>{if(e.key==='Escape')closeDrawer();});
+  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
 
-  renderAll();
+  applyFilters();
 }
 
 function switchTab(tab){
   document.querySelectorAll('.nav-btn,.mob-nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id===tab));
-  document.getElementById('topTitle').textContent = PAGE_TITLES[tab];
-  setTimeout(()=>window.dispatchEvent(new Event('resize')), 100);
-}
-
-function applyFilters(){
-  recomputeData();
-  updateTopMeta();
-  updateFilterBar();
-  renderAll();
+  document.getElementById('topTitle').textContent = PAGE_TITLES[tab] || tab;
+  setTimeout(()=>window.dispatchEvent(new Event('resize')), 80);
 }
 
 function applyDatePreset(){
-  const months = RAW.meta.Months;
-  const last = months[months.length-1];
+  const months = RAW.meta.Months, last = months[months.length-1];
   if(STATE.datePreset==='all'){STATE.dateFrom=months[0]; STATE.dateTo=last;}
   else if(STATE.datePreset==='ytd'){
     const y = last.split('-')[0];
-    const ytdStart = months.find(m=>m>=y+'-01') || months[0];
-    STATE.dateFrom = ytdStart; STATE.dateTo = last;
+    STATE.dateFrom = months.find(m=>m>=y+'-01') || months[0]; STATE.dateTo = last;
   }
-  else if(STATE.datePreset==='3m'){STATE.dateFrom = monthSub(last,2); STATE.dateTo=last;}
-  else if(STATE.datePreset==='6m'){STATE.dateFrom = monthSub(last,5); STATE.dateTo=last;}
-  else if(STATE.datePreset==='12m'){STATE.dateFrom = monthSub(last,11); STATE.dateTo=last;}
-  // Clamp to available months
+  else if(STATE.datePreset==='3m'){STATE.dateFrom=monthSub(last,2); STATE.dateTo=last;}
+  else if(STATE.datePreset==='6m'){STATE.dateFrom=monthSub(last,5); STATE.dateTo=last;}
+  else if(STATE.datePreset==='12m'){STATE.dateFrom=monthSub(last,11); STATE.dateTo=last;}
   if(STATE.dateFrom < months[0]) STATE.dateFrom = months[0];
   document.getElementById('dateFrom').value = STATE.dateFrom;
   document.getElementById('dateTo').value = STATE.dateTo;
 }
-
 function updatePresetButtons(){
-  document.querySelectorAll('#datePreset button').forEach(b=>{
-    b.classList.toggle('active', b.dataset.p===STATE.datePreset);
+  document.querySelectorAll('#datePreset button').forEach(b=>b.classList.toggle('active', b.dataset.p===STATE.datePreset));
+}
+function monthSub(m, n){
+  const [y,mo] = m.split('-').map(Number);
+  const d = new Date(Date.UTC(y, mo-1-n, 1));
+  return d.toISOString().slice(0,7);
+}
+
+/* ============ AGGREGATION ============ */
+// Per (school, language) compute monthly stats and the goal from top-quartile SOV months.
+function computeGoals(){
+  // Filter facts by date window only (NOT by school/language — goals need full data per combo)
+  const facts = RAW.facts.filter(f => f.m >= STATE.dateFrom && f.m <= STATE.dateTo);
+
+  // Per (school|language|month) aggregate
+  const slm = {};  // key 's|l|m' -> {Calls, Contacted, R34Calls, R34Contacts, SOV, Orders, Acq, Reps:Set, Upsales}
+  const r34Set = new Set(['R3','R4']);
+  facts.forEach(f=>{
+    const k = `${f.s}|${f.l}|${f.m}`;
+    if(!slm[k]) slm[k] = {s:f.s, l:f.l, m:f.m, Calls:0, Contacted:0, R34Calls:0, R34Contacts:0, SOV:0, Orders:0, Acq:0, Reps:new Set(), Upsales:0};
+    const o = slm[k];
+    o.Calls += f.c; o.Contacted += f.ct; o.SOV += f.v; o.Orders += f.o; o.Acq += f.a; o.Upsales += f.u; o.Reps.add(f.r);
+    if(r34Set.has(f.rc)) o.R34Calls += f.c;
+    if(r34Set.has(f.ro)) o.R34Contacts += f.ct;
   });
+
+  // Per-month stats per combo
+  const byCombo = {};  // 's|l' -> {months:[{m, Calls, Contacted, R34Calls, R34Contacts, SOV, Orders, Acq, callsR34Pct, contR34Pct}], school, language}
+  Object.values(slm).forEach(o=>{
+    const k = `${o.s}|${o.l}`;
+    if(!byCombo[k]) byCombo[k] = {school:o.s, language:o.l, months:[]};
+    const callsR34Pct = o.Calls? 100*o.R34Calls/o.Calls : null;
+    const contR34Pct = o.Contacted? 100*o.R34Contacts/o.Contacted : null;
+    byCombo[k].months.push({
+      m:o.m, Calls:o.Calls, Contacted:o.Contacted, R34Calls:o.R34Calls, R34Contacts:o.R34Contacts,
+      SOV:o.SOV, Orders:o.Orders, Acq:o.Acq, Upsales:o.Upsales, RepsCount:o.Reps.size,
+      callsR34Pct, contR34Pct
+    });
+  });
+
+  // For each combo: compute totals, goal (top-25% SOV months), and current shares
+  const combos = Object.values(byCombo).map(c=>{
+    c.months.sort((a,b)=>a.m.localeCompare(b.m));
+    const totals = c.months.reduce((a,m)=>({
+      Calls:a.Calls+m.Calls, Contacted:a.Contacted+m.Contacted,
+      R34Calls:a.R34Calls+m.R34Calls, R34Contacts:a.R34Contacts+m.R34Contacts,
+      SOV:a.SOV+m.SOV, Orders:a.Orders+m.Orders, Acq:a.Acq+m.Acq, Upsales:a.Upsales+m.Upsales
+    }), {Calls:0,Contacted:0,R34Calls:0,R34Contacts:0,SOV:0,Orders:0,Acq:0,Upsales:0});
+
+    const actualCallsR34 = totals.Calls? 100*totals.R34Calls/totals.Calls : null;
+    const actualContR34  = totals.Contacted? 100*totals.R34Contacts/totals.Contacted : null;
+
+    // Goal: top-25% SOV months (round up; min 1 month if any data)
+    const monthsWithSOV = c.months.filter(m=>m.SOV>0);
+    const k = Math.max(1, Math.ceil(monthsWithSOV.length * TOP_QUARTILE_FRACTION));
+    const topMonths = [...monthsWithSOV].sort((a,b)=>b.SOV-a.SOV).slice(0, k);
+
+    let goalCalls = null, goalCont = null;
+    if(topMonths.length){
+      const validCalls = topMonths.filter(m=>m.callsR34Pct!=null);
+      const validCont  = topMonths.filter(m=>m.contR34Pct!=null);
+      // Volume-weighted average within top months (so months with more calls dominate)
+      if(validCalls.length){
+        const wSum = validCalls.reduce((a,m)=>a+m.Calls,0);
+        goalCalls = wSum? validCalls.reduce((a,m)=>a+m.callsR34Pct*m.Calls,0)/wSum : null;
+      }
+      if(validCont.length){
+        const wSum = validCont.reduce((a,m)=>a+m.Contacted,0);
+        goalCont = wSum? validCont.reduce((a,m)=>a+m.contR34Pct*m.Contacted,0)/wSum : null;
+      }
+    }
+
+    const lowConf = totals.Calls < LOW_CONF_CALLS;
+
+    return {
+      school:c.school, language:c.language,
+      totals, monthsCount:c.months.length, topMonths,
+      months:c.months,
+      actualCallsR34, actualContR34, goalCalls, goalCont,
+      gapCalls: (goalCalls!=null && actualCallsR34!=null) ? actualCallsR34-goalCalls : null,
+      gapCont:  (goalCont!=null && actualContR34!=null)  ? actualContR34-goalCont   : null,
+      lowConf
+    };
+  });
+
+  return combos;
 }
 
-function formatMonth(m){
-  const [y,mo] = m.split('-');
-  const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return names[+mo-1]+' '+y;
+function aggregateForKPIs(combos){
+  // Filtered combos honor school + language pickers
+  const filtered = combos.filter(c =>
+    (!STATE.school || c.school===STATE.school) &&
+    (!STATE.language || c.language===STATE.language)
+  );
+  const t = filtered.reduce((a,c)=>({
+    Calls:a.Calls+c.totals.Calls, Contacted:a.Contacted+c.totals.Contacted,
+    R34Calls:a.R34Calls+c.totals.R34Calls, R34Contacts:a.R34Contacts+c.totals.R34Contacts,
+    SOV:a.SOV+c.totals.SOV, Orders:a.Orders+c.totals.Orders, Acq:a.Acq+c.totals.Acq,
+  }), {Calls:0,Contacted:0,R34Calls:0,R34Contacts:0,SOV:0,Orders:0,Acq:0});
+  return {totals:t, combos:filtered};
 }
 
-function updateTopMeta(){
-  const t = DATA.totals;
+function applyFilters(){
+  const all = computeGoals();
+  GLOBAL_COMBOS = all;
+  const view = aggregateForKPIs(all);
+  GLOBAL_VIEW = view;
+  updateTopMeta(view);
+  updateFilterBar(view);
+  renderHome();
+  renderGaps();
+  renderDetail();
+}
+let GLOBAL_COMBOS = [], GLOBAL_VIEW = {totals:{}, combos:[]};
+
+function updateTopMeta(view){
+  const t = view.totals;
   document.getElementById('topMeta').textContent =
-    `${t.DateMin} → ${t.DateMax}  ·  ${t.UniqueReps} reps  ·  ${fmt.num(t.Calls)} calls  ·  ${fmt.num(t.Contacted)} contacts  ·  ${fmt.money(t.SOV)} SOV`;
+    `${fmt.monthName(STATE.dateFrom)} → ${fmt.monthName(STATE.dateTo)}  ·  ${fmt.num(t.Calls)} calls  ·  ${fmt.num(t.Contacted)} contacts  ·  ${fmt.money(t.SOV)} SOV  ·  ${view.combos.length} combos`;
 }
 
-function updateFilterBar(){
+function updateFilterBar(view){
   const months = RAW.meta.Months;
   const chips = [];
-  const customDate = !(STATE.dateFrom===months[0] && STATE.dateTo===months[months.length-1]);
-  if(customDate){
-    chips.push({label:`${formatMonth(STATE.dateFrom)} → ${formatMonth(STATE.dateTo)}`, key:'date'});
-  }
-  if(STATE.globalSeg){
-    chips.push({label:`Segment: ${STATE.globalSeg}`, key:'seg'});
-  }
+  if(!(STATE.dateFrom===months[0] && STATE.dateTo===months[months.length-1]))
+    chips.push({label:`${fmt.monthName(STATE.dateFrom)} → ${fmt.monthName(STATE.dateTo)}`, key:'date'});
+  if(STATE.school) chips.push({label:`School: ${STATE.school}`, key:'school'});
+  if(STATE.language) chips.push({label:`Language: ${STATE.language}`, key:'lang'});
+
   const bar = document.getElementById('filterBar');
   const chipsEl = document.getElementById('filterChips');
-  if(chips.length===0){
-    bar.classList.add('empty');
-    chipsEl.innerHTML = '';
-  } else {
+  if(chips.length===0){ bar.classList.add('empty'); chipsEl.innerHTML=''; }
+  else{
     bar.classList.remove('empty');
     chipsEl.innerHTML = chips.map(c=>`<span class="filter-chip">${c.label}<button data-clear="${c.key}" title="Remove">×</button></span>`).join('');
     chipsEl.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>clearChip(b.dataset.clear)));
   }
-  // Summary
-  const t = DATA.totals;
+  const t = view.totals;
   document.getElementById('filterSummary').textContent =
-    `${fmt.num(t.Calls)} calls · ${fmt.num(t.Contacted)} contacts · ${fmt.money(t.SOV)} SOV · ${t.UniqueReps} reps`;
+    `${fmt.num(t.Calls)} calls · ${fmt.num(t.Contacted)} contacts · ${fmt.money(t.SOV)} SOV`;
 }
-
 function clearChip(key){
   const months = RAW.meta.Months;
   if(key==='date'){
-    STATE.dateFrom = months[0]; STATE.dateTo = months[months.length-1];
-    STATE.datePreset='all';
-    document.getElementById('dateFrom').value = STATE.dateFrom;
-    document.getElementById('dateTo').value = STATE.dateTo;
+    STATE.dateFrom=months[0]; STATE.dateTo=months[months.length-1]; STATE.datePreset='all';
+    document.getElementById('dateFrom').value = STATE.dateFrom; document.getElementById('dateTo').value = STATE.dateTo;
     updatePresetButtons();
-  } else if(key==='seg'){
-    STATE.globalSeg=''; document.getElementById('globalSeg').value='';
-  }
+  } else if(key==='school'){STATE.school=''; document.getElementById('schoolSel').value='';}
+  else if(key==='lang'){STATE.language=''; document.getElementById('langSel').value='';}
   applyFilters();
 }
 
-function renderAll(){
-  renderExec(); renderSegments(); renderAlloc(); renderReps(); renderOpt(); renderDataQuality();
+/* ============ HOME (HEATMAP) ============ */
+function renderHome(){
+  const view = GLOBAL_VIEW;
+  const t = view.totals;
+  const overallCallsR34 = t.Calls? 100*t.R34Calls/t.Calls : null;
+  const overallContR34  = t.Contacted? 100*t.R34Contacts/t.Contacted : null;
+
+  // Weighted avg goal across visible combos (where goals exist & not low conf)
+  const goodCombos = view.combos.filter(c=>!c.lowConf && c.goalCalls!=null);
+  const goalCallsAvg = weightedAvg(goodCombos, c=>c.goalCalls, c=>c.totals.Calls);
+  const goalContAvg  = weightedAvg(goodCombos.filter(c=>c.goalCont!=null), c=>c.goalCont, c=>c.totals.Contacted);
+
+  // Combos at-or-above goal (calls share)
+  const onGoal = view.combos.filter(c=>c.gapCalls!=null && !c.lowConf && c.gapCalls>=-1).length;
+  const totalWithGoal = view.combos.filter(c=>c.gapCalls!=null && !c.lowConf).length;
+
+  // KPI row
+  const kpis = [
+    {label:'Total SOV', val:fmt.money(t.SOV), sub:`${fmt.num(t.Orders)} orders · ${fmt.num(t.Acq)} acquisitions`, tone:''},
+    {label:'%R3+R4 calls · actual vs goal', val:overallCallsR34!=null?fmt.pct(overallCallsR34):'—',
+      sub: goalCallsAvg!=null ? `Goal ${fmt.pct(goalCallsAvg)} · ${fmt.signedPts(overallCallsR34-goalCallsAvg)}` : 'No goal',
+      tone:gapTone(overallCallsR34, goalCallsAvg)},
+    {label:'%R3+R4 contacts · actual vs goal', val:overallContR34!=null?fmt.pct(overallContR34):'—',
+      sub: goalContAvg!=null ? `Goal ${fmt.pct(goalContAvg)} · ${fmt.signedPts(overallContR34-goalContAvg)}` : 'No goal',
+      tone:gapTone(overallContR34, goalContAvg)},
+    {label:'Combos at-or-above goal', val:`${onGoal} / ${totalWithGoal}`,
+      sub:`${(totalWithGoal? 100*onGoal/totalWithGoal:0).toFixed(0)}% of combos hitting goal (calls)`,
+      tone: totalWithGoal? (onGoal/totalWithGoal>=.6?'good':onGoal/totalWithGoal>=.3?'warn':'bad') : ''},
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(k=>`
+    <div class="kpi ${k.tone}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.val}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>
+  `).join('');
+
+  // Heatmap
+  renderHeatmap(view.combos);
+
+  // Top gaps + top wins (by calls gap)
+  const withGap = view.combos.filter(c=>c.gapCalls!=null && !c.lowConf);
+  const gaps = [...withGap].sort((a,b)=>a.gapCalls-b.gapCalls).slice(0,5);
+  const wins = [...withGap].sort((a,b)=>b.gapCalls-a.gapCalls).slice(0,5);
+  document.getElementById('topGaps').innerHTML = gaps.length? gaps.map(c=>renderInsightRow(c,'bad')).join('') : '<p class="muted" style="margin:0">No gaps in current view.</p>';
+  document.getElementById('topWins').innerHTML = wins.length? wins.map(c=>renderInsightRow(c,'good')).join('') : '<p class="muted" style="margin:0">No combos at-or-above goal yet.</p>';
 }
 
-/* ============== EXECUTIVE ============== */
-function renderExec(){
-  const t = DATA.totals;
-  // Filter by global segment if set
-  const segFilter = STATE.globalSeg;
-  let filtered = segFilter ? DATA.segments.filter(s=>s.SemesterCategory===segFilter) : DATA.segments;
-  const sub = filtered.reduce((a,s)=>({Calls:a.Calls+s.Calls,Contacted:a.Contacted+s.Contacted,Orders:a.Orders+s.Orders,Acquisitions:a.Acquisitions+s.Acquisitions,SOV:a.SOV+s.SOV,Upsales:a.Upsales+s.Upsales}),{Calls:0,Contacted:0,Orders:0,Acquisitions:0,SOV:0,Upsales:0});
-  const tt = segFilter ? sub : t;
-
-  const items = [
-    ['Total calls', fmt.num(tt.Calls), 'volume'],
-    ['Contacted customers', fmt.num(tt.Contacted), 'volume'],
-    ['Orders / registrations', fmt.num(tt.Orders), 'outcome'],
-    ['First-time acquisitions', fmt.num(tt.Acquisitions), 'outcome'],
-    ['SOV (Stat CRM)', fmt.money(tt.SOV), 'outcome'],
-    ['SOV per call', fmt.money2(tt.SOV/tt.Calls), 'efficiency'],
-    ['SOV per contact', fmt.money2(tt.SOV/tt.Contacted), 'efficiency'],
-    ['Orders per call', ((tt.Orders/tt.Calls)*100).toFixed(2)+'%', 'efficiency'],
-    ['Orders per contact', ((tt.Orders/tt.Contacted)*100).toFixed(1)+'%', 'efficiency'],
-    ['Acq per call', ((tt.Acquisitions/tt.Calls)*100).toFixed(2)+'%', 'efficiency'],
-    ['Acq per contact', ((tt.Acquisitions/tt.Contacted)*100).toFixed(1)+'%', 'efficiency'],
-    ['Calls per contact', (tt.Calls/tt.Contacted).toFixed(1), 'workload']
-  ];
-  const colorMap = {volume:'var(--info)',outcome:'var(--good)',efficiency:'var(--accent-2)',workload:'var(--warn)'};
-  document.getElementById('kpiGrid').innerHTML = items.map(i=>`
-    <div class="kpi">
-      <div class="kpi-label" style="color:${colorMap[i[2]]}"><span style="display:inline-block;width:6px;height:6px;border-radius:2px;background:${colorMap[i[2]]}"></span>${i[0]}</div>
-      <div class="kpi-value">${i[1]}</div>
-      <div class="kpi-sub">${i[2]} KPI</div>
-    </div>`).join('');
-
-  /* Chart 1: share or absolute */
-  const segs = DATA.segments;
-  const total = segs.reduce((a,s)=>({Calls:a.Calls+s.Calls,Contacted:a.Contacted+s.Contacted,SOV:a.SOV+s.SOV,Orders:a.Orders+s.Orders,Acq:a.Acquisitions+s.Acquisitions}),{Calls:0,Contacted:0,SOV:0,Orders:0,Acq:0});
-  const x = segs.map(s=>s.SemesterCategory);
-  const isShare = STATE.execMode==='share';
-  const get = (s,key)=> isShare ? 100*s[key]/total[key.replace('Acq','Acquisitions')] : s[key.replace('Acq','Acquisitions')];
-  const traces = [
-    {name:'Calls',     x, y:segs.map(s=>get(s,'Calls')),     type:'bar', marker:{color:'#7BA7FF'}, hovertemplate:'%{y:'+(isShare?'.1f':',')+'}'+(isShare?'%':'')+'<extra>%{x} · Calls</extra>'},
-    {name:'Contacted', x, y:segs.map(s=>get(s,'Contacted')), type:'bar', marker:{color:'#A78BFA'}, hovertemplate:'%{y:'+(isShare?'.1f':',')+'}'+(isShare?'%':'')+'<extra>%{x} · Contacted</extra>'},
-    {name:'SOV',       x, y:segs.map(s=>get(s,'SOV')),       type:'bar', marker:{color:'#56D9A6'}, hovertemplate:'%{y:'+(isShare?'.1f':',.0f')+'}'+(isShare?'%':'')+'<extra>%{x} · SOV</extra>'},
-    {name:'Orders',    x, y:segs.map(s=>get(s,'Orders')),    type:'bar', marker:{color:'#F4B23C'}, hovertemplate:'%{y:'+(isShare?'.1f':',')+'}'+(isShare?'%':'')+'<extra>%{x} · Orders</extra>'},
-  ];
-  Plotly.react('execChart1', traces, {...PLOTLY_LAYOUT,barmode:'group',bargap:0.25,bargroupgap:0.1,
-    yaxis:{...PLOTLY_LAYOUT.yaxis, title: isShare?'Share %':'Volume', type: isShare?'linear':'log'}}, PLOTLY_CONFIG);
-
-  /* Chart 2: combined ranks */
-  const sr = DATA.seg_rank_calls;
-  const ranks=['R1','R2','R3','R4'];
-  const byRank = ranks.map(r=>{
-    const rows = sr.filter(x=>x.RankCalls===r && (!segFilter || x.SemesterCategory===segFilter));
-    const c = rows.reduce((a,x)=>a+x.Calls,0);
-    const sov = rows.reduce((a,x)=>a+x.SOV,0);
-    const ord = rows.reduce((a,x)=>a+x.Orders,0);
-    return {r, sovPerCall:c?sov/c:0, ordPerCall:c?100*ord/c:0};
-  });
-  Plotly.react('execChart2',[
-    {name:'SOV / call', x:byRank.map(b=>b.r), y:byRank.map(b=>b.sovPerCall), type:'bar',
-      marker:{color:byRank.map(b=>RANK_COLORS[b.r]),line:{width:0}},
-      hovertemplate:'%{x}<br>SOV/call $%{y:.2f}<extra></extra>'},
-    {name:'Orders / call', x:byRank.map(b=>b.r), y:byRank.map(b=>b.ordPerCall), type:'scatter', mode:'lines+markers',
-      line:{color:'#F2F4F8',width:2},marker:{size:9,color:'#F2F4F8',line:{color:'#0A0B0F',width:2}},yaxis:'y2',
-      hovertemplate:'%{x}<br>Orders/call %{y:.2f}%<extra></extra>'}
-  ],{...PLOTLY_LAYOUT,
-      yaxis:{...PLOTLY_LAYOUT.yaxis,title:'SOV / call ($)'},
-      yaxis2:{title:'Orders / call (%)',overlaying:'y',side:'right',gridcolor:'#262B38',tickfont:{color:'#8A92A3'},titlefont:{color:'#8A92A3'}}}, PLOTLY_CONFIG);
-
-  /* Headlines */
-  const lines = [];
-  const r1 = byRank.find(b=>b.r==='R1'), r4 = byRank.find(b=>b.r==='R4');
-  if(r1 && r4 && r1.sovPerCall>0){
-    const lift = (r4.sovPerCall/r1.sovPerCall-1)*100;
-    lines.push({type:lift>0?'good':'bad', icon:lift>0?'✓':'!', title:'Rank logic '+(lift>0?'validated':'broken')+' (combined)',
-      text:`R4 generates <strong>${fmt.money2(r4.sovPerCall)}</strong> per call vs R1 at <strong>${fmt.money2(r1.sovPerCall)}</strong> — a <strong>${lift.toFixed(0)}%</strong> lift. Orders-per-call also climbs R1→R4.`});
-  }
-  const segMap = {};
-  sr.forEach(x=>{(segMap[x.SemesterCategory] ||= {})[x.RankCalls]=x;});
-  Object.keys(segMap).forEach(seg=>{
-    if(segFilter && seg!==segFilter) return;
-    const m = segMap[seg];
-    if(!m.R1||!m.R4) return;
-    const lift = (m.R4.SOVperCall/m.R1.SOVperCall-1)*100;
-    const gap = m.R4.SOVShare - m.R4.CallShare;
-    let type='warn',icon='~',title=seg, text='';
-    if(lift > 0){
-      if(gap > 8){type='good';icon='↑';title=seg+' — R4 under-allocated';
-        text=`R4 SOV/call lift vs R1: <strong>${lift.toFixed(0)}%</strong>. R4 takes only <strong>${m.R4.CallShare.toFixed(0)}%</strong> of calls but produces <strong>${m.R4.SOVShare.toFixed(0)}%</strong> of SOV. Give R4 more.`;}
-      else if(gap < -8){type='bad';icon='↓';title=seg+' — R4 over-allocated';
-        text=`R4 takes <strong>${m.R4.CallShare.toFixed(0)}%</strong> of calls but produces only <strong>${m.R4.SOVShare.toFixed(0)}%</strong> of SOV. Shift volume away.`;}
-      else{type='good';icon='✓';title=seg+' — balanced';
-        text=`R4 SOV/call lift vs R1: <strong>${lift.toFixed(0)}%</strong>. Allocation gap is small (${gap.toFixed(1)} pts).`;}
-    } else {
-      type='bad';icon='!';title=seg+' — rank inverted';
-      text=`R4 underperforms R1 on SOV/call (${fmt.money2(m.R4.SOVperCall)} vs ${fmt.money2(m.R1.SOVperCall)}). Investigate before acting on the rank.`;
-    }
-    lines.push({type,icon,title,text});
-  });
-  document.getElementById('headlines').innerHTML = lines.map(l=>`
-    <div class="insight ${l.type}">
-      <div class="insight-icon">${l.icon}</div>
-      <div class="insight-body">
-        <div class="insight-title">${l.title}</div>
-        <p class="insight-text">${l.text}</p>
+function renderInsightRow(c, tone){
+  const sov = fmt.money(c.totals.SOV);
+  const calls = fmt.num(c.totals.Calls);
+  const gap = c.gapCalls;
+  const arrow = gap >= 0 ? '↑' : '↓';
+  return `
+    <div class="insight ${tone}" style="cursor:pointer" data-school="${c.school}" data-lang="${c.language}">
+      <div class="insight-icon">${arrow}</div>
+      <div style="flex:1;min-width:0">
+        <div class="insight-title">${c.school} · ${c.language} <span class="muted" style="font-weight:400">— ${calls} calls · ${sov} SOV</span></div>
+        <p class="insight-text">
+          Calls to R3+R4: <strong>${fmt.pct(c.actualCallsR34)}</strong> vs goal <strong>${fmt.pct(c.goalCalls)}</strong> · <strong class="${gap>=0?'text-good':'text-bad'}">${fmt.signedPts(gap)}</strong>
+          ${c.gapCont!=null ? ` &nbsp;|&nbsp; Contacts: <strong>${fmt.pct(c.actualContR34)}</strong> vs goal <strong>${fmt.pct(c.goalCont)}</strong> · <strong class="${c.gapCont>=0?'text-good':'text-bad'}">${fmt.signedPts(c.gapCont)}</strong>` : ''}
+        </p>
       </div>
-    </div>`).join('');
+    </div>`;
+  }
+
+function gapTone(actual, goal){
+  if(actual==null || goal==null) return '';
+  const g = actual-goal;
+  if(g >= -1) return 'good';
+  if(g >= -8) return 'warn';
+  return 'bad';
+}
+function weightedAvg(arr, valFn, weightFn){
+  let v=0, w=0; arr.forEach(x=>{ const wt=weightFn(x); if(wt>0){v+=valFn(x)*wt; w+=wt;} });
+  return w? v/w : null;
 }
 
-/* ============== SEGMENTS ============== */
-function renderSegments(){
-  const segs = DATA.segments;
-  const cols = [
-    {k:'SemesterCategory', label:'Segment'},
-    {k:'Calls', label:'Calls', num:true, fmt:fmt.num},
-    {k:'Contacted', label:'Contacted', num:true, fmt:fmt.num},
-    {k:'Orders', label:'Orders', num:true, fmt:fmt.num},
-    {k:'Acquisitions', label:'Acq', num:true, fmt:fmt.num},
-    {k:'SOV', label:'SOV', num:true, fmt:fmt.money},
-    {k:'cpc', label:'Calls/contact', num:true, fmt:n=>n.toFixed(1)},
-    {k:'sovPerCall', label:'SOV/call', num:true, fmt:fmt.money2},
-    {k:'ordPerCall', label:'Orders/call', num:true, fmt:fmt.pct2},
-    {k:'UniqueEmp', label:'Reps', num:true, fmt:fmt.num},
-  ];
-  const data = segs.map(s=>({...s,
-    cpc: s.Calls/s.Contacted,
-    sovPerCall: s.SOV/s.Calls,
-    ordPerCall: 100*s.Orders/s.Calls,
-  }));
-  document.getElementById('segTableWrap').innerHTML = renderInteractiveTable('seg', cols, data, row=>openSegmentDrawer(row.SemesterCategory));
+/* ============ HEATMAP ============ */
+function renderHeatmap(combos){
+  const schools = RAW.meta.Schools;
+  const languages = RAW.meta.Languages;
+  // Build lookup by school|language
+  const lookup = {};
+  combos.forEach(c=> lookup[`${c.school}|${c.language}`] = c);
 
-  const x = segs.map(s=>s.SemesterCategory);
-  const baseBar = (cont,y,color,name,fmtType='num') => Plotly.react(cont, [{
-    x, y, type:'bar', marker:{color, line:{width:0}},
-    hovertemplate: '%{x}<br>'+name+': '+(fmtType==='money'?'%{y:$,.0f}':'%{y:,.0f}')+'<extra></extra>',
-    text: y.map(v=> fmtType==='money'? fmt.money(v): fmt.num(v)),
-    textposition:'outside', textfont:{color:'#8A92A3', size:11}
-  }], {...PLOTLY_LAYOUT, yaxis:{...PLOTLY_LAYOUT.yaxis,title:''}, margin:{...PLOTLY_LAYOUT.margin,t:20}}, PLOTLY_CONFIG);
-
-  baseBar('segChart1', segs.map(s=>s.SOV), '#56D9A6', 'SOV', 'money');
-  // dual
-  Plotly.react('segChart2',[
-    {x,y:segs.map(s=>s.Calls), name:'Calls', type:'bar', marker:{color:'#7BA7FF'}, hovertemplate:'%{x}<br>Calls: %{y:,.0f}<extra></extra>'},
-    {x,y:segs.map(s=>s.Contacted), name:'Contacted', type:'bar', marker:{color:'#A78BFA'}, yaxis:'y2', hovertemplate:'%{x}<br>Contacted: %{y:,.0f}<extra></extra>'}
-  ], {...PLOTLY_LAYOUT, barmode:'group', yaxis:{...PLOTLY_LAYOUT.yaxis,title:'Calls'}, yaxis2:{title:'Contacted',overlaying:'y',side:'right',gridcolor:'#262B38',tickfont:{color:'#8A92A3'},titlefont:{color:'#8A92A3'}}}, PLOTLY_CONFIG);
-  baseBar('segChart3', segs.map(s=>s.Orders), '#F4B23C', 'Orders');
-  baseBar('segChart4', segs.map(s=>s.Acquisitions), '#FF6B7A', 'Acquisitions');
-}
-
-/* ============== ALLOCATION ============== */
-function renderAlloc(){
-  // If a global segment is active, use it (and hide the local picker since it's redundant)
-  const globalActive = !!STATE.globalSeg;
-  const seg = globalActive ? STATE.globalSeg : STATE.allocSeg;
-  // Sync the dropdown UI
-  const allocSegEl = document.getElementById('allocSeg');
-  if(allocSegEl){
-    allocSegEl.value = seg;
-    const allocSegRow = allocSegEl.closest('.controls') || allocSegEl.parentElement;
-    if(allocSegRow) allocSegRow.style.opacity = globalActive ? '0.5' : '1';
-    allocSegEl.disabled = globalActive;
-  }
-  const dataKey = STATE.rankType;
-  const rankField = dataKey==='seg_rank_calls'?'RankCalls':'RankCont';
-  const rows = DATA[dataKey].filter(x=>x.SemesterCategory===seg);
-  const ranks=['R1','R2','R3','R4'];
-  const present = ranks.map(r=>rows.find(x=>x[rankField]===r)).filter(Boolean);
-
-  const compMetric = STATE.allocMetric;  // SOVShare / OrderShare / AcqShare
-  const compLabel = compMetric==='SOVShare'?'SOV':compMetric==='OrderShare'?'Orders':'Acq';
-
-  Plotly.react('allocChart1', [
-    {name:'Calls',     x:present.map(p=>p[rankField]), y:present.map(p=>p.CallShare),    type:'bar', marker:{color:'#7BA7FF'}},
-    {name:'Contacted', x:present.map(p=>p[rankField]), y:present.map(p=>p.ContactShare), type:'bar', marker:{color:'#A78BFA'}},
-    {name:compLabel,   x:present.map(p=>p[rankField]), y:present.map(p=>p[compMetric]),  type:'bar', marker:{color:'#56D9A6'}},
-  ],{...PLOTLY_LAYOUT, barmode:'group', bargap:0.25, yaxis:{...PLOTLY_LAYOUT.yaxis,title:'Share %', ticksuffix:'%'}}, PLOTLY_CONFIG);
-
-  Plotly.react('allocChart2', [
-    {name:'SOV / call', x:present.map(p=>p[rankField]), y:present.map(p=>p.SOVperCall), type:'bar',
-      marker:{color:present.map(p=>RANK_COLORS[p[rankField]]),line:{width:0}},
-      hovertemplate:'%{x}<br>SOV/call $%{y:.2f}<extra></extra>'},
-    {name:'Orders / call (%)', x:present.map(p=>p[rankField]), y:present.map(p=>p.OrdersPerCall), type:'scatter', mode:'lines+markers',
-      line:{color:'#F2F4F8',width:2},marker:{size:9,color:'#F2F4F8',line:{color:'#0A0B0F',width:2}},yaxis:'y2'}
-  ],{...PLOTLY_LAYOUT,
-      yaxis:{...PLOTLY_LAYOUT.yaxis,title:'SOV / call ($)'},
-      yaxis2:{title:'Orders / call (%)',overlaying:'y',side:'right',gridcolor:'#262B38',tickfont:{color:'#8A92A3'},titlefont:{color:'#8A92A3'}}}, PLOTLY_CONFIG);
-
-  // Table
-  const cols = [
-    {k:'rank', label:'Rank', html:r=>`<span class="rank rank-${r[rankField].toLowerCase()}">${r[rankField]}</span>`},
-    {k:'Calls', label:'Calls', num:true, fmt:fmt.num},
-    {k:'Contacted', label:'Contacted', num:true, fmt:fmt.num},
-    {k:'Orders', label:'Orders', num:true, fmt:fmt.num},
-    {k:'SOV', label:'SOV', num:true, fmt:fmt.money},
-    {k:'CallShare', label:'Call %', num:true, fmt:fmt.pct},
-    {k:'ContactShare', label:'Contact %', num:true, fmt:fmt.pct},
-    {k:'SOVShare', label:'SOV %', num:true, fmt:fmt.pct},
-    {k:'SOVperCall', label:'SOV/call', num:true, fmt:fmt.money2},
-    {k:'OrdersPerCall', label:'Orders/call', num:true, fmt:fmt.pct2},
-    {k:'gap', label:'Gap', num:true, html:r=>{
-      const g=r.SOVShare-r.CallShare;
-      return g>5?`<span class="text-good">+${g.toFixed(1)} pts</span>`:g<-5?`<span class="text-bad">${g.toFixed(1)} pts</span>`:`<span class="muted">${g>=0?'+':''}${g.toFixed(1)} pts</span>`;
-    }}
-  ];
-  document.getElementById('allocTableWrap').innerHTML = renderInteractiveTable('alloc', cols, present, ()=>{});
-
-  // Callouts
-  const cs = [];
-  present.forEach(p=>{
-    const gap = p.CallShare - p.SOVShare;
-    if(gap > 5) cs.push({type:'bad', icon:'↓', title:`${p[rankField]} over-allocated calls`,
-      text:`${p[rankField]} takes <strong>${p.CallShare.toFixed(1)}%</strong> of calls but only <strong>${p.SOVShare.toFixed(1)}%</strong> of SOV. Shift roughly <strong>${gap.toFixed(1)} pts</strong> of call volume to higher-yield ranks.`});
-    else if(gap < -5) cs.push({type:'good', icon:'↑', title:`${p[rankField]} under-allocated calls`,
-      text:`${p[rankField]} produces <strong>${p.SOVShare.toFixed(1)}%</strong> of SOV with only <strong>${p.CallShare.toFixed(1)}%</strong> of calls. Add ~<strong>${(-gap).toFixed(1)} pts</strong> more call volume here.`});
-  });
-  const eff = present.map(p=>p.SOVperCall);
-  const mono = eff.length>=2 && eff.every((v,i)=>i===0||v>=eff[i-1]);
-  if(present.length===4){
-    if(mono) cs.push({type:'good',icon:'✓',title:`Rank logic validated in ${seg}`, text:`SOV/call rises monotonically R1 → R4 (${eff.map(e=>'$'+e.toFixed(2)).join(' → ')}).`});
-    else cs.push({type:'warn',icon:'!',title:`Rank logic partially broken in ${seg}`, text:`SOV/call does not rise monotonically R1 → R4 (${eff.map(e=>'$'+e.toFixed(2)).join(' → ')}). Investigate why a lower rank outperforms a higher rank.`});
-  }
-  document.getElementById('allocCallouts').innerHTML = cs.length ? cs.map(c=>`
-    <div class="insight ${c.type}">
-      <div class="insight-icon">${c.icon}</div>
-      <div class="insight-body"><div class="insight-title">${c.title}</div><p class="insight-text">${c.text}</p></div>
-    </div>`).join('') : '<div class="empty">No major imbalance detected for this segment.</div>';
-}
-
-/* ============== REPS ============== */
-function renderReps(){
-  const globalActive = !!STATE.globalSeg;
-  const seg = globalActive ? STATE.globalSeg : STATE.repSeg;
-  const repSegEl = document.getElementById('repSeg');
-  if(repSegEl){
-    repSegEl.value = seg;
-    repSegEl.disabled = globalActive;
-    repSegEl.style.opacity = globalActive ? '0.5' : '1';
-  }
-  let rows = DATA.employees.filter(e=>e.SemesterCategory===seg && e.Calls>=STATE.minCalls);
-  if(STATE.conf==='High') rows = rows.filter(r=>r.Confidence==='High');
-  if(STATE.conf==='Medium') rows = rows.filter(r=>r.Confidence!=='Low');
-  if(STATE.search) rows = rows.filter(r=>r.Rep.toLowerCase().includes(STATE.search));
-
-  // Scatter
-  Plotly.react('repScatter', [{
-    x:rows.map(r=>r.Calls), y:rows.map(r=>r.SOVperCall||0),
-    customdata:rows.map(r=>[r.Rep,r.Contacted,r.Orders,r.OrdersPerCall||0,r.AvgRankCalls||0,r.Confidence]),
-    mode:'markers', type:'scatter',
-    hovertemplate:'<b>%{customdata[0]}</b><br>Calls: %{x:,.0f} · Contacted: %{customdata[1]:,.0f}<br>SOV/call: $%{y:.2f}<br>Orders/call: %{customdata[3]:.2f}%<br>Avg rank: %{customdata[4]:.1f} · %{customdata[5]}<extra></extra>',
-    marker:{
-      size:rows.map(r=>Math.max(8,Math.min(46,Math.sqrt((r.SOV||0)/280)))),
-      color:rows.map(r=>r.LiftSOVperCall||0),
-      colorscale:[[0,'#FF6B7A'],[0.5,'#F4B23C'],[1,'#56D9A6']],
-      cmin:-100,cmax:100,
-      colorbar:{title:{text:'Lift vs<br>seg avg %', font:{color:'#8A92A3', size:11}}, tickfont:{color:'#8A92A3', size:10}, len:0.8, thickness:10, outlinewidth:0},
-      line:{color:'#0A0B0F',width:1.5}, opacity:0.85
+  const metric = STATE.heatMetric;
+  // Determine color for each cell
+  const colorFor = (gap) => {
+    if(gap==null) return '#1F242E';
+    // gap range typically -30..+30; clamp
+    const g = Math.max(-25, Math.min(25, gap));
+    // Map -25 to red, 0 to amber, +25 to green
+    if(g >= 0){
+      const t = g/25;
+      // amber (#F4B23C) -> green (#56D9A6)
+      return interp('#F4B23C', '#56D9A6', t);
+    } else {
+      const t = -g/25;
+      return interp('#F4B23C', '#FF6B7A', t);
     }
-  }], {...PLOTLY_LAYOUT,
-    xaxis:{...PLOTLY_LAYOUT.xaxis,title:'Calls (log scale)',type:'log'},
-    yaxis:{...PLOTLY_LAYOUT.yaxis,title:'SOV per call ($)'}}, PLOTLY_CONFIG);
+  };
 
-  document.getElementById('repScatter').on('plotly_click', e=>{
-    if(e.points && e.points[0]){
-      const idx = e.points[0].pointIndex;
-      openRepDrawer(rows[idx]);
-    }
+  let html = '<table class="heatmap"><thead><tr><th class="col-school">School / Language</th>';
+  languages.forEach(l => html += `<th>${l}</th>`);
+  html += '</tr></thead><tbody>';
+
+  schools.forEach(s=>{
+    html += `<tr><td class="cell-school">${s}</td>`;
+    languages.forEach(l=>{
+      const c = lookup[`${s}|${l}`];
+      if(!c || c.totals.Calls===0){
+        html += `<td><div class="heatmap-cell empty"><div class="muted" style="font-size:10px">—</div></div></td>`;
+        return;
+      }
+      const actual = metric==='calls' ? c.actualCallsR34 : c.actualContR34;
+      const goal   = metric==='calls' ? c.goalCalls : c.goalCont;
+      const gap    = (actual!=null && goal!=null) ? actual-goal : null;
+      const bg = colorFor(gap);
+      // Text color based on background luminance
+      const txt = gap==null ? '#8A92A3' : (Math.abs(gap)>15 ? '#0A0B0F' : '#0A0B0F');
+      const lowConfDot = c.lowConf ? '<div class="heatmap-conf" title="Low confidence (<500 calls)"></div>' : '';
+      const tip = `${s} · ${l}\nActual: ${fmt.pct(actual)}\nGoal: ${fmt.pct(goal)}\nGap: ${fmt.signedPts(gap)}\nCalls: ${fmt.num(c.totals.Calls)} · SOV: ${fmt.money(c.totals.SOV)}${c.lowConf?'\nLow confidence':''}`;
+      html += `<td>
+        <div class="heatmap-cell" style="background:${bg};color:${txt}" title="${tip.replace(/\"/g,'&quot;')}" data-school="${s}" data-lang="${l}">
+          ${lowConfDot}
+          <div class="v">${actual!=null?actual.toFixed(0)+'%':'—'}</div>
+          <div class="g">${gap==null?'no goal':fmt.signedPts(gap)}</div>
+        </div>
+      </td>`;
+    });
+    html += '</tr>';
   });
+  html += '</tbody></table>';
+  document.getElementById('heatmapWrap').innerHTML = html;
+  document.querySelectorAll('.heatmap-cell[data-school]').forEach(el=>{
+    el.addEventListener('click', ()=>openComboDrawer(el.dataset.school, el.dataset.lang));
+  });
+  // Insight click → drawer
+  document.querySelectorAll('#topGaps .insight, #topWins .insight').forEach(el=>{
+    el.addEventListener('click', ()=>openComboDrawer(el.dataset.school, el.dataset.lang));
+  });
+}
+function interp(c1, c2, t){
+  const p1 = hexToRgb(c1), p2 = hexToRgb(c2);
+  const r = Math.round(p1[0] + (p2[0]-p1[0])*t);
+  const g = Math.round(p1[1] + (p2[1]-p1[1])*t);
+  const b = Math.round(p1[2] + (p2[2]-p1[2])*t);
+  return `rgb(${r},${g},${b})`;
+}
+function hexToRgb(h){h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
 
-  // Top bars
-  const top = [...rows].sort((a,b)=>(b.OrdersPerCall||0)-(a.OrdersPerCall||0)).slice(0,15).reverse();
-  Plotly.react('repBars', [{
-    type:'bar', orientation:'h',
-    x:top.map(r=>r.OrdersPerCall||0), y:top.map(r=>r.Rep),
-    marker:{color:top.map(r=>(r.LiftOrdersPerCall||0)>0?'#56D9A6':'#FF6B7A'), line:{width:0}},
-    text:top.map(r=>(r.OrdersPerCall||0).toFixed(2)+'%'), textposition:'outside', textfont:{color:'#C7CCD6',size:11},
-    hovertemplate:'<b>%{y}</b><br>Orders/call %{x:.2f}%<extra></extra>'
-  }], {...PLOTLY_LAYOUT, xaxis:{...PLOTLY_LAYOUT.xaxis,title:'Orders / call (%)'}, yaxis:{...PLOTLY_LAYOUT.yaxis,automargin:true}, margin:{l:120,r:50,t:18,b:48}}, PLOTLY_CONFIG);
-
-  // Table
+/* ============ GAPS RANKING ============ */
+function renderGaps(){
+  const view = GLOBAL_VIEW;
+  const rows = view.combos.filter(c=>c.totals.Calls>0).map(c=>({
+    school:c.school, language:c.language,
+    Calls:c.totals.Calls, Contacted:c.totals.Contacted, SOV:c.totals.SOV,
+    actCalls:c.actualCallsR34, goalCalls:c.goalCalls, gapCalls:c.gapCalls,
+    actCont:c.actualContR34, goalCont:c.goalCont, gapCont:c.gapCont,
+    lowConf:c.lowConf
+  }));
   const cols = [
-    {k:'Rep', label:'Rep'},
+    {k:'school', label:'School'},
+    {k:'language', label:'Language'},
     {k:'Calls', label:'Calls', num:true, fmt:fmt.num},
     {k:'Contacted', label:'Contacted', num:true, fmt:fmt.num},
-    {k:'Orders', label:'Orders', num:true, fmt:fmt.num},
-    {k:'Acquisitions', label:'Acq', num:true, fmt:fmt.num},
     {k:'SOV', label:'SOV', num:true, fmt:fmt.money},
-    {k:'SOVperCall', label:'SOV/call', num:true, fmt:fmt.money2},
-    {k:'OrdersPerCall', label:'Orders/call', num:true, fmt:n=>n==null?'—':n.toFixed(2)+'%'},
-    {k:'AvgRankCalls', label:'Avg rank', num:true, fmt:n=>n==null?'—':n.toFixed(1)},
-    {k:'LiftSOVperCall', label:'Lift', num:true, html:r=>{
-      const v=r.LiftSOVperCall;
-      return v==null?'—':v>0?`<span class="text-good">+${v.toFixed(0)}%</span>`:`<span class="text-bad">${v.toFixed(0)}%</span>`;
+    {k:'actCalls', label:'%R34 calls', num:true, fmt:fmt.pct},
+    {k:'goalCalls', label:'Goal', num:true, fmt:fmt.pct},
+    {k:'gapCalls', label:'Calls gap', num:true, html:r=>{
+      if(r.gapCalls==null) return '<span class="muted">—</span>';
+      const cls = r.gapCalls>=-1?'text-good':r.gapCalls>=-8?'text-warn':'text-bad';
+      return `<span class="${cls}">${fmt.signedPts(r.gapCalls)}</span>`;
     }},
-    {k:'Confidence', label:'Conf', html:r=>{
-      const c=r.Confidence;
-      const cls=c==='High'?'pill-good':c==='Medium'?'pill-warn':'pill-bad';
-      return `<span class="pill ${cls}">${c}</span>`;
-    }}
+    {k:'actCont', label:'%R34 contacts', num:true, fmt:fmt.pct},
+    {k:'goalCont', label:'Goal', num:true, fmt:fmt.pct},
+    {k:'gapCont', label:'Contacts gap', num:true, html:r=>{
+      if(r.gapCont==null) return '<span class="muted">—</span>';
+      const cls = r.gapCont>=-1?'text-good':r.gapCont>=-8?'text-warn':'text-bad';
+      return `<span class="${cls}">${fmt.signedPts(r.gapCont)}</span>`;
+    }},
+    {k:'lowConf', label:'Conf', html:r=> r.lowConf? '<span class="pill pill-warn">Low</span>' : '<span class="pill pill-good">OK</span>'}
   ];
-  document.getElementById('repTableWrap').innerHTML = renderInteractiveTable('reps', cols, rows, openRepDrawer);
+  document.getElementById('gapTableWrap').innerHTML = renderTable('gaps', cols, rows, r=>openComboDrawer(r.school, r.language));
 }
 
-/* ============== OPTIMIZATION ============== */
-function renderOpt(){
-  const ranks=['R1','R2','R3','R4'];
-  const segs=[...new Set(DATA.seg_rank_calls.map(x=>x.SemesterCategory))];
-  const shiftRows = [];
-  segs.forEach(seg=>{
-    ranks.forEach(r=>{
-      const x = DATA.seg_rank_calls.find(z=>z.SemesterCategory===seg && z.RankCalls===r);
-      if(!x) return;
-      shiftRows.push({...x, shift: x.SOVShare - x.CallShare});
-    });
+/* ============ DETAIL ============ */
+function renderDetail(){
+  const school = STATE.school || STATE.detailSchool;
+  const language = STATE.language || STATE.detailLanguage;
+  const combo = GLOBAL_COMBOS.find(c=>c.school===school && c.language===language);
+
+  // School+Language pickers in detail (in case no global filter set)
+  let html = `
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-head" style="margin-bottom:0">
+        <div>
+          <h3 class="card-title">Pick a school × language</h3>
+          <p class="card-hint">When you set the global School + Language filter, this updates automatically.</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <select id="detailSchool" class="select">${RAW.meta.Schools.map(s=>`<option ${s===school?'selected':''}>${s}</option>`).join('')}</select>
+          <select id="detailLang" class="select">${RAW.meta.Languages.map(l=>`<option ${l===language?'selected':''}>${l}</option>`).join('')}</select>
+        </div>
+      </div>
+    </div>`;
+
+  if(!combo || combo.totals.Calls===0){
+    html += `<div class="card"><p class="muted" style="margin:0">No data for ${school} · ${language} in this date window.</p></div>`;
+    document.getElementById('detailContent').innerHTML = html;
+    bindDetailPickers();
+    return;
+  }
+
+  // KPI row
+  const kpis = [
+    {label:'Total calls', val:fmt.num(combo.totals.Calls)},
+    {label:'Total contacts', val:fmt.num(combo.totals.Contacted)},
+    {label:'Total SOV', val:fmt.money(combo.totals.SOV)},
+    {label:'Top SOV months used for goal', val:`${combo.topMonths.length} / ${combo.monthsCount}`}
+  ];
+  html += '<div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">' + kpis.map(k=>`
+    <div class="kpi"><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.val}</div></div>
+  `).join('') + '</div>';
+
+  // Goal vs Actual cards
+  const gapCallsCls = combo.gapCalls==null?'':combo.gapCalls>=-1?'good':combo.gapCalls>=-8?'warn':'bad';
+  const gapContCls  = combo.gapCont==null?'':combo.gapCont>=-1?'good':combo.gapCont>=-8?'warn':'bad';
+  html += `
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-head"><div><h3 class="card-title">% Calls to R3+R4</h3><p class="card-hint">How much call volume goes to your strongest reps.</p></div></div>
+        <div style="display:flex;gap:24px;align-items:flex-end;margin-top:6px">
+          <div><div class="kpi-label">Actual</div><div class="kpi-value">${combo.actualCallsR34!=null?fmt.pct(combo.actualCallsR34):'—'}</div></div>
+          <div><div class="kpi-label">Goal</div><div class="kpi-value">${combo.goalCalls!=null?fmt.pct(combo.goalCalls):'—'}</div></div>
+          <div class="${gapCallsCls?'text-'+gapCallsCls:''}"><div class="kpi-label">Gap</div><div class="kpi-value">${fmt.signedPts(combo.gapCalls)}</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h3 class="card-title">% Contacted by R3+R4</h3><p class="card-hint">How much customer contact goes to your strongest reps.</p></div></div>
+        <div style="display:flex;gap:24px;align-items:flex-end;margin-top:6px">
+          <div><div class="kpi-label">Actual</div><div class="kpi-value">${combo.actualContR34!=null?fmt.pct(combo.actualContR34):'—'}</div></div>
+          <div><div class="kpi-label">Goal</div><div class="kpi-value">${combo.goalCont!=null?fmt.pct(combo.goalCont):'—'}</div></div>
+          <div class="${gapContCls?'text-'+gapContCls:''}"><div class="kpi-label">Gap</div><div class="kpi-value">${fmt.signedPts(combo.gapCont)}</div></div>
+        </div>
+      </div>
+    </div>`;
+
+  // Trend charts
+  html += `
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-head"><div><h3 class="card-title">Monthly trend · % R3+R4 of calls</h3><p class="card-hint">Goal line = avg of top-25% SOV months. Stars mark those top months.</p></div></div>
+        <div id="trendCalls" class="chart" style="height:340px"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h3 class="card-title">Monthly trend · % R3+R4 of contacts</h3><p class="card-hint">Goal line = avg of top-25% SOV months.</p></div></div>
+        <div id="trendCont" class="chart" style="height:340px"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head"><div><h3 class="card-title">SOV by month</h3><p class="card-hint">Bars highlighted in green are the top-25% SOV months that defined the goal.</p></div></div>
+      <div id="trendSOV" class="chart" style="height:300px"></div>
+    </div>`;
+
+  document.getElementById('detailContent').innerHTML = html;
+  bindDetailPickers();
+
+  // Plot trends
+  const months = combo.months.map(m=>m.m);
+  const callsPct = combo.months.map(m=>m.callsR34Pct);
+  const contPct  = combo.months.map(m=>m.contR34Pct);
+  const sov      = combo.months.map(m=>m.SOV);
+  const isTop = combo.months.map(m=> combo.topMonths.some(tm=>tm.m===m.m));
+
+  // Common: goal lines as horizontal shape
+  const trendLayout = (goal, title, isTopArr) => ({
+    ...PLOTLY_LAYOUT,
+    xaxis:{...PLOTLY_LAYOUT.xaxis, tickvals:months, ticktext:months.map(fmt.monthName), tickangle:-30, automargin:true},
+    yaxis:{...PLOTLY_LAYOUT.yaxis, title:'% to R3+R4', ticksuffix:'%'},
+    shapes: goal!=null ? [{type:'line', xref:'paper', x0:0, x1:1, y0:goal, y1:goal,
+      line:{color:'#56D9A6', width:2, dash:'dash'}}] : [],
+    annotations: goal!=null ? [{xref:'paper', x:1, y:goal, xanchor:'right', yanchor:'bottom',
+      text:`Goal ${goal.toFixed(1)}%`, showarrow:false, font:{color:'#56D9A6', size:11}}] : []
   });
-  const cols = [
-    {k:'SemesterCategory', label:'Segment'},
-    {k:'rank', label:'Rank', html:r=>`<span class="rank rank-${r.RankCalls.toLowerCase()}">${r.RankCalls}</span>`},
-    {k:'Calls', label:'Calls', num:true, fmt:fmt.num},
-    {k:'CallShare', label:'Call %', num:true, fmt:fmt.pct},
-    {k:'SOVShare', label:'SOV %', num:true, fmt:fmt.pct},
-    {k:'OrderShare', label:'Order %', num:true, fmt:fmt.pct},
-    {k:'shift', label:'Shift', num:true, html:r=>{
-      const s=r.shift;
-      return s>5?`<span class="text-good">+${s.toFixed(1)} pts</span>`:s<-5?`<span class="text-bad">${s.toFixed(1)} pts</span>`:`<span class="muted">${s>=0?'+':''}${s.toFixed(1)} pts</span>`;
-    }},
-    {k:'action', label:'Action', html:r=>{
-      const s=r.shift;
-      return s>5?`<span class="pill pill-good">↑ Give more calls</span>`:s<-5?`<span class="pill pill-bad">↓ Shift away</span>`:`<span class="pill pill-mute">Hold</span>`;
-    }}
-  ];
-  document.getElementById('shiftTableWrap').innerHTML = renderInteractiveTable('shift', cols, shiftRows, ()=>{});
 
-  // High-potential & over-exposed
-  const hp = [], oe = [];
-  segs.forEach(seg=>{
-    const reps = DATA.employees.filter(e=>e.SemesterCategory===seg && e.Calls>=200);
-    if(!reps.length) return;
-    const callsArr = reps.map(r=>r.Calls).sort((a,b)=>a-b);
-    const median = callsArr[Math.floor(callsArr.length/2)];
-    reps.forEach(r=>{
-      if((r.LiftSOVperCall||0)>20 && r.Calls < median && r.Confidence!=='Low') hp.push({...r,_segMedian:median});
-      if((r.LiftSOVperCall||0)<-20 && r.Calls > median && r.Confidence!=='Low') oe.push({...r,_segMedian:median});
-    });
+  Plotly.react('trendCalls', [
+    {x:months.map(fmt.monthName), y:callsPct, type:'scatter', mode:'lines+markers',
+      line:{color:'#7BA7FF', width:2}, marker:{size:isTop.map(t=>t?12:7), symbol:isTop.map(t=>t?'star':'circle'), color:isTop.map(t=>t?'#56D9A6':'#7BA7FF'), line:{color:'#0A0B0F',width:1.5}},
+      hovertemplate:'%{x}<br>%R3+R4: %{y:.1f}%<extra></extra>'}
+  ], trendLayout(combo.goalCalls, 'calls', isTop), PLOTLY_CONFIG);
+
+  Plotly.react('trendCont', [
+    {x:months.map(fmt.monthName), y:contPct, type:'scatter', mode:'lines+markers',
+      line:{color:'#A78BFA', width:2}, marker:{size:isTop.map(t=>t?12:7), symbol:isTop.map(t=>t?'star':'circle'), color:isTop.map(t=>t?'#56D9A6':'#A78BFA'), line:{color:'#0A0B0F',width:1.5}},
+      hovertemplate:'%{x}<br>%R3+R4: %{y:.1f}%<extra></extra>'}
+  ], trendLayout(combo.goalCont, 'contacts', isTop), PLOTLY_CONFIG);
+
+  Plotly.react('trendSOV', [
+    {x:months.map(fmt.monthName), y:sov, type:'bar',
+      marker:{color: isTop.map(t=>t?'#56D9A6':'#323847'), line:{width:0}},
+      hovertemplate:'%{x}<br>SOV $%{y:,.0f}<extra></extra>'}
+  ], {...PLOTLY_LAYOUT, xaxis:{...PLOTLY_LAYOUT.xaxis, tickangle:-30, automargin:true}, yaxis:{...PLOTLY_LAYOUT.yaxis, title:'SOV ($)'}}, PLOTLY_CONFIG);
+}
+function bindDetailPickers(){
+  const ds = document.getElementById('detailSchool');
+  const dl = document.getElementById('detailLang');
+  if(ds) ds.addEventListener('change', e=>{STATE.detailSchool = e.target.value; renderDetail();});
+  if(dl) dl.addEventListener('change', e=>{STATE.detailLanguage = e.target.value; renderDetail();});
+}
+
+/* ============ DRAWER ============ */
+function openComboDrawer(school, language){
+  const c = GLOBAL_COMBOS.find(x=>x.school===school && x.language===language);
+  if(!c){ return; }
+  document.getElementById('drawerTitle').textContent = `${school} · ${language}`;
+  const gapCallsCls = c.gapCalls==null?'':c.gapCalls>=-1?'text-good':c.gapCalls>=-8?'text-warn':'text-bad';
+  const gapContCls  = c.gapCont==null?'':c.gapCont>=-1?'text-good':c.gapCont>=-8?'text-warn':'text-bad';
+  let html = `
+    <div class="kpi-row" style="grid-template-columns:1fr 1fr">
+      <div class="kpi"><div class="kpi-label">Calls</div><div class="kpi-value">${fmt.num(c.totals.Calls)}</div><div class="kpi-sub">${fmt.num(c.totals.Contacted)} contacts</div></div>
+      <div class="kpi"><div class="kpi-label">SOV</div><div class="kpi-value">${fmt.money(c.totals.SOV)}</div><div class="kpi-sub">${fmt.num(c.totals.Orders)} orders</div></div>
+    </div>
+    ${c.lowConf ? '<div class="insight warn"><div class="insight-icon">!</div><div class="insight-body"><div class="insight-title">Low confidence</div><p class="insight-text">Less than 500 calls in this period — interpret with care.</p></div></div>' : ''}
+
+    <div class="divider"></div>
+    <h4 style="font-size:13px;margin:0 0 10px">Goal vs actual</h4>
+    <div class="grid grid-2" style="gap:10px">
+      <div class="kpi"><div class="kpi-label">% Calls to R3+R4</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px">
+          <div style="font-size:22px;font-weight:700">${c.actualCallsR34!=null?fmt.pct(c.actualCallsR34):'—'}</div>
+          <div style="text-align:right">
+            <div class="kpi-label" style="font-size:10px">Goal</div>
+            <div style="font-size:14px;color:var(--text-2)">${c.goalCalls!=null?fmt.pct(c.goalCalls):'—'}</div>
+          </div>
+        </div>
+        <div class="${gapCallsCls}" style="font-size:13px;margin-top:6px;font-weight:600">${fmt.signedPts(c.gapCalls)}</div>
+      </div>
+      <div class="kpi"><div class="kpi-label">% Contacts by R3+R4</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px">
+          <div style="font-size:22px;font-weight:700">${c.actualContR34!=null?fmt.pct(c.actualContR34):'—'}</div>
+          <div style="text-align:right">
+            <div class="kpi-label" style="font-size:10px">Goal</div>
+            <div style="font-size:14px;color:var(--text-2)">${c.goalCont!=null?fmt.pct(c.goalCont):'—'}</div>
+          </div>
+        </div>
+        <div class="${gapContCls}" style="font-size:13px;margin-top:6px;font-weight:600">${fmt.signedPts(c.gapCont)}</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <h4 style="font-size:13px;margin:0 0 10px">Top-25% SOV months (used to set the goal)</h4>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Month</th><th class="num">SOV</th><th class="num">%R34 calls</th><th class="num">%R34 contacts</th></tr></thead>
+      <tbody>${c.topMonths.map(tm=>`<tr><td>${fmt.monthName(tm.m)}</td><td class="num">${fmt.money(tm.SOV)}</td><td class="num">${tm.callsR34Pct!=null?fmt.pct(tm.callsR34Pct):'—'}</td><td class="num">${tm.contR34Pct!=null?fmt.pct(tm.contR34Pct):'—'}</td></tr>`).join('')}</tbody>
+    </table></div>
+
+    <div class="divider"></div>
+    <button class="btn-reset" id="goDetail" style="width:100%;padding:10px">Open full detail page →</button>
+  `;
+  document.getElementById('drawerBody').innerHTML = html;
+  document.getElementById('goDetail').addEventListener('click', ()=>{
+    STATE.detailSchool = school; STATE.detailLanguage = language;
+    renderDetail(); switchTab('detail'); closeDrawer();
   });
-  const sCols = [
-    {k:'SemesterCategory', label:'Segment'},
-    {k:'Rep', label:'Rep'},
-    {k:'Calls', label:'Calls', num:true, fmt:fmt.num},
-    {k:'SOVperCall', label:'SOV/call', num:true, fmt:fmt.money2},
-    {k:'LiftSOVperCall', label:'Lift', num:true, html:r=>{
-      const v=r.LiftSOVperCall||0;
-      return v>0?`<span class="text-good">+${v.toFixed(0)}%</span>`:`<span class="text-bad">${v.toFixed(0)}%</span>`;
-    }},
-    {k:'AvgRankCalls', label:'Avg rank', num:true, fmt:n=>n==null?'—':n.toFixed(1)}
-  ];
-  hp.sort((a,b)=>(b.LiftSOVperCall||0)-(a.LiftSOVperCall||0));
-  oe.sort((a,b)=>(a.LiftSOVperCall||0)-(b.LiftSOVperCall||0));
-  document.getElementById('hpTable').innerHTML = renderInteractiveTable('hp', sCols, hp.slice(0,30), openRepDrawer);
-  document.getElementById('oeTable').innerHTML = renderInteractiveTable('oe', sCols, oe.slice(0,30), openRepDrawer);
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerMask').classList.add('open');
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerMask').classList.remove('open');
 }
 
-/* ============== DATA QUALITY ============== */
-function renderDataQuality(){
-  const segs = [...new Set(DATA.employees.map(e=>e.SemesterCategory))];
-  const tiers = ['High','Medium','Low'];
-  const colors = {High:'#56D9A6',Medium:'#F4B23C',Low:'#FF6B7A'};
-  const traces = tiers.map(t=>({
-    name:t, x:segs, y:segs.map(s=>DATA.employees.filter(e=>e.SemesterCategory===s && e.Confidence===t).length),
-    type:'bar', marker:{color:colors[t], line:{width:0}}, hovertemplate:'%{x}<br>'+t+': %{y} reps<extra></extra>'
-  }));
-  Plotly.react('confChart', traces, {...PLOTLY_LAYOUT, barmode:'stack', yaxis:{...PLOTLY_LAYOUT.yaxis,title:'Rep × segment cells'}}, PLOTLY_CONFIG);
-
-  const t = DATA.totals;
-  const items = [
-    ['Date range', `${t.DateMin} → ${t.DateMax}`],
-    ['Unique reps', fmt.num(t.UniqueReps)],
-    ['Segments', String(DATA.segments.length)],
-    ['Total calls', fmt.num(t.Calls)],
-    ['Total contacted', fmt.num(t.Contacted)],
-    ['Total SOV', fmt.money(t.SOV)],
-    ['Total orders', fmt.num(t.Orders)],
-    ['Total acquisitions', fmt.num(t.Acquisitions)],
-    ['Upsales', fmt.money(t.Upsales)]
-  ];
-  document.getElementById('dataMeta').innerHTML = items.map(i=>`
-    <div class="kpi"><div class="kpi-label">${i[0]}</div><div class="kpi-value" style="font-size:18px">${i[1]}</div></div>`).join('');
-}
-
-/* ============== INTERACTIVE TABLE ============== */
-function renderInteractiveTable(name, cols, rows, onRowClick){
-  // Get sort state for this table
-  STATE._sort = STATE._sort || {};
-  if(!STATE._sort[name]) STATE._sort[name] = {col: cols.find(c=>c.num)?.k || cols[0].k, dir:'desc'};
+/* ============ INTERACTIVE TABLE ============ */
+function renderTable(name, cols, rows, onRowClick){
+  if(!STATE._sort[name]) STATE._sort[name] = {col: cols.find(c=>c.k==='gapCalls')?.k || cols[0].k, dir:'asc'};
   const s = STATE._sort[name];
   const sorted = [...rows].sort((a,b)=>{
     let av=a[s.col], bv=b[s.col];
-    if(typeof av==='string') return s.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av);
-    av=av==null?-Infinity:av; bv=bv==null?-Infinity:bv;
+    if(typeof av==='string'){return s.dir==='asc'?av.localeCompare(bv):bv.localeCompare(av);}
+    av=av==null?Infinity:av; bv=bv==null?Infinity:bv;  // nulls sort last
     return s.dir==='asc'?av-bv:bv-av;
   });
-
   const head = '<thead><tr>'+cols.map(c=>{
     const cls = (c.num?'num':'') + (s.col===c.k?(s.dir==='asc'?' sort-asc':' sort-desc'):'');
     return `<th class="${cls}" data-col="${c.k}">${c.label}<span class="sort-i">${s.col===c.k?(s.dir==='asc'?'▲':'▼'):'⇅'}</span></th>`;
@@ -1651,16 +1163,13 @@ function renderInteractiveTable(name, cols, rows, onRowClick){
     return `<tr data-idx="${i}">${cells}</tr>`;
   }).join('')+'</tbody>';
   const html = `<div class="table-wrap"><table data-name="${name}">${head}${body}</table></div>`;
-
-  // Defer event binding to next tick (after innerHTML applied)
   setTimeout(()=>{
     document.querySelectorAll(`table[data-name="${name}"] th`).forEach(th=>{
       th.onclick = ()=>{
         const c = th.dataset.col;
         if(s.col===c) s.dir = s.dir==='asc'?'desc':'asc'; else { s.col=c; s.dir='desc'; }
-        // Re-render parent
         const wrap = th.closest('.table-wrap').parentElement;
-        wrap.innerHTML = renderInteractiveTable(name, cols, rows, onRowClick);
+        wrap.innerHTML = renderTable(name, cols, rows, onRowClick);
       };
     });
     if(onRowClick){
@@ -1671,81 +1180,6 @@ function renderInteractiveTable(name, cols, rows, onRowClick){
     }
   }, 0);
   return html;
-}
-
-/* ============== DRAWER ============== */
-function openSegmentDrawer(seg){
-  const sData = DATA.segments.find(s=>s.SemesterCategory===seg);
-  const sr = DATA.seg_rank_calls.filter(x=>x.SemesterCategory===seg);
-  const reps = DATA.employees.filter(e=>e.SemesterCategory===seg).sort((a,b)=>(b.SOV||0)-(a.SOV||0)).slice(0,12);
-  document.getElementById('drawerTitle').textContent = `Segment · ${seg}`;
-  const html = `
-    <div class="grid grid-2" style="gap:12px">
-      <div class="kpi"><div class="kpi-label">SOV</div><div class="kpi-value">${fmt.money(sData.SOV)}</div></div>
-      <div class="kpi"><div class="kpi-label">Calls</div><div class="kpi-value">${fmt.num(sData.Calls)}</div></div>
-      <div class="kpi"><div class="kpi-label">Contacted</div><div class="kpi-value">${fmt.num(sData.Contacted)}</div></div>
-      <div class="kpi"><div class="kpi-label">Orders</div><div class="kpi-value">${fmt.num(sData.Orders)}</div></div>
-    </div>
-    <div class="divider"></div>
-    <h4 style="margin:0 0 10px;font-size:13px">Rank breakdown</h4>
-    <div>
-      ${sr.map(r=>`
-        <div class="bar-row-grid">
-          <div class="bar-label"><span class="rank rank-${r.RankCalls.toLowerCase()}">${r.RankCalls}</span> &nbsp;${fmt.num(r.Calls)} calls</div>
-          <div class="bar-stack">
-            <span style="width:${r.CallShare.toFixed(1)}%;background:#7BA7FF" title="Call share"></span>
-          </div>
-          <div class="bar-val">${fmt.pct(r.CallShare)} calls / ${fmt.pct(r.SOVShare)} SOV</div>
-        </div>`).join('')}
-    </div>
-    <div class="divider"></div>
-    <h4 style="margin:0 0 10px;font-size:13px">Top reps in segment</h4>
-    <div class="table-wrap" style="max-height:none">
-      <table>
-        <thead><tr><th>Rep</th><th class="num">Calls</th><th class="num">SOV</th><th class="num">SOV/call</th><th class="num">Lift</th><th>Conf</th></tr></thead>
-        <tbody>${reps.map(r=>`<tr style="cursor:pointer" data-rep="${r.Rep}"><td>${r.Rep}</td><td class="num">${fmt.num(r.Calls)}</td><td class="num">${fmt.money(r.SOV)}</td><td class="num">${fmt.money2(r.SOVperCall||0)}</td><td class="num ${(r.LiftSOVperCall||0)>0?'text-good':'text-bad'}">${(r.LiftSOVperCall||0).toFixed(0)}%</td><td><span class="pill ${r.Confidence==='High'?'pill-good':r.Confidence==='Medium'?'pill-warn':'pill-bad'}">${r.Confidence}</span></td></tr>`).join('')}</tbody>
-      </table>
-    </div>`;
-  document.getElementById('drawerBody').innerHTML = html;
-  document.querySelectorAll('#drawerBody tr[data-rep]').forEach(tr=>tr.onclick=()=>{
-    const rep = reps.find(r=>r.Rep===tr.dataset.rep); if(rep) openRepDrawer(rep);
-  });
-  document.getElementById('drawer').classList.add('open');
-  document.getElementById('drawerMask').classList.add('open');
-}
-
-function openRepDrawer(rep){
-  document.getElementById('drawerTitle').textContent = `${rep.Rep} · ${rep.SemesterCategory}`;
-  const lift = rep.LiftSOVperCall||0;
-  const liftCls = lift>0?'text-good':'text-bad';
-  const html = `
-    <div class="grid grid-2" style="gap:12px">
-      <div class="kpi"><div class="kpi-label">Calls</div><div class="kpi-value">${fmt.num(rep.Calls)}</div></div>
-      <div class="kpi"><div class="kpi-label">Contacted</div><div class="kpi-value">${fmt.num(rep.Contacted)}</div></div>
-      <div class="kpi"><div class="kpi-label">Orders</div><div class="kpi-value">${fmt.num(rep.Orders)}</div></div>
-      <div class="kpi"><div class="kpi-label">Acquisitions</div><div class="kpi-value">${fmt.num(rep.Acquisitions)}</div></div>
-      <div class="kpi"><div class="kpi-label">SOV</div><div class="kpi-value">${fmt.money(rep.SOV)}</div></div>
-      <div class="kpi"><div class="kpi-label">SOV per call</div><div class="kpi-value">${fmt.money2(rep.SOVperCall||0)}</div><div class="kpi-sub ${liftCls}">${lift>=0?'+':''}${lift.toFixed(0)}% vs seg avg</div></div>
-      <div class="kpi"><div class="kpi-label">Orders per call</div><div class="kpi-value">${(rep.OrdersPerCall||0).toFixed(2)}%</div></div>
-      <div class="kpi"><div class="kpi-label">Avg rank by calls</div><div class="kpi-value">${(rep.AvgRankCalls||0).toFixed(1)}</div><div class="kpi-sub">Confidence · <span class="pill ${rep.Confidence==='High'?'pill-good':rep.Confidence==='Medium'?'pill-warn':'pill-bad'}">${rep.Confidence}</span></div></div>
-    </div>
-    <div class="divider"></div>
-    <h4 style="margin:0 0 8px;font-size:13px">Recommended action</h4>
-    <p style="color:var(--text-2);font-size:13.5px;line-height:1.6;margin:0">
-      ${rep.Confidence==='Low' ? `Sample is too small (${rep.Calls} calls, ${rep.Contacted} contacts). Don't draw a conclusion yet — increase testing volume to at least 200 calls / 30 contacts.` :
-        lift > 30 ? `Strong above-average performer (+${lift.toFixed(0)}%). Consider increasing volume, especially if calls are below segment median.` :
-        lift < -30 ? `Underperforming by ${lift.toFixed(0)}%. Review call quality, coaching needs, or reduce volume in favor of stronger reps.` :
-        `Performance roughly in line with segment average. Hold current allocation; monitor next two rank cycles.`}
-    </p>
-  `;
-  document.getElementById('drawerBody').innerHTML = html;
-  document.getElementById('drawer').classList.add('open');
-  document.getElementById('drawerMask').classList.add('open');
-}
-
-function closeDrawer(){
-  document.getElementById('drawer').classList.remove('open');
-  document.getElementById('drawerMask').classList.remove('open');
 }
 </script>
 </body>
