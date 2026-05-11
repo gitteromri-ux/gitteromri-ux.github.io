@@ -9,7 +9,7 @@ Filters to only the school × language combinations that are actively running:
 import json, hashlib, os
 import pandas as pd
 
-LIVE_SCHOOLS = {"Hebrew Related", "Biblical Related", "Popular Languages"}
+LIVE_SCHOOLS = {"Hebrew Related", "Biblical Related"}
 LIVE_LANGUAGES = {"English", "Spanish"}
 
 def pseudo(eid):
