@@ -804,12 +804,15 @@ function renderHome(){
   // Heatmap
   renderHeatmap(view.combos);
 
-  // Top gaps + top wins (by calls gap)
+  // Biggest gaps + strongest performers — partitioned by actual gap sign, no duplicates
   const withGap = view.combos.filter(c=>c.gapCalls!=null && !c.lowConf);
-  const gaps = [...withGap].sort((a,b)=>a.gapCalls-b.gapCalls).slice(0,5);
-  const wins = [...withGap].sort((a,b)=>b.gapCalls-a.gapCalls).slice(0,5);
-  document.getElementById('topGaps').innerHTML = gaps.length? gaps.map(c=>renderInsightRow(c,'bad')).join('') : '<p class="muted" style="margin:0">No gaps in current view.</p>';
-  document.getElementById('topWins').innerHTML = wins.length? wins.map(c=>renderInsightRow(c,'good')).join('') : '<p class="muted" style="margin:0">No combos at-or-above goal yet.</p>';
+  const below = withGap.filter(c=>c.gapCalls < 0).sort((a,b)=>a.gapCalls-b.gapCalls).slice(0,5);
+  const above = withGap.filter(c=>c.gapCalls >= 0).sort((a,b)=>b.gapCalls-a.gapCalls).slice(0,5);
+  // Update card titles to reflect actual counts
+  document.querySelector('#topGaps').previousElementSibling.querySelector('.card-title').textContent = below.length >= 5 ? 'Top 5 biggest gaps' : `Biggest gaps (${below.length})`;
+  document.querySelector('#topWins').previousElementSibling.querySelector('.card-title').textContent = above.length >= 5 ? 'Top 5 strongest performers' : `Strongest performers (${above.length})`;
+  document.getElementById('topGaps').innerHTML = below.length? below.map(c=>renderInsightRow(c,'bad')).join('') : '<p class="muted" style="margin:0">All combos are at-or-above their R3+R4 calls goal.</p>';
+  document.getElementById('topWins').innerHTML = above.length? above.map(c=>renderInsightRow(c,'good')).join('') : '<p class="muted" style="margin:0">No combos hitting goal yet.</p>';
 }
 
 function renderInsightRow(c, tone){
