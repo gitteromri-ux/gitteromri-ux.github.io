@@ -1033,8 +1033,8 @@ function renderDetail(){
       </div>
     </div>
     <div class="card" style="margin-bottom:16px">
-      <div class="card-head"><div><h3 class="card-title">SOV by month</h3><p class="card-hint">Bars highlighted in green are the top-25% SOV months that defined the goal.</p></div></div>
-      <div id="trendSOV" class="chart" style="height:300px"></div>
+      <div class="card-head"><div><h3 class="card-title">SOV by month</h3><p class="card-hint">Bars highlighted in green are the top-25% SOV months that defined the goal. Hover any bar for full month detail.</p></div></div>
+      <div id="trendSOV" class="chart" style="height:380px"></div>
     </div>
     <div class="card" id="monthDetailCard" style="margin-bottom:16px">
       <div class="card-head"><div><h3 class="card-title">Month detail</h3><p class="card-hint" id="monthDetailHint">Hover any point on a chart · click a point to pin it here.</p></div></div>
@@ -1135,16 +1135,53 @@ function renderDetail(){
       customdata:cd}
   ], trendLayout(combo.goalCont), PLOTLY_CONFIG);
 
+  // SOV y-axis scaling: emphasize differences. Start the visible range at
+  // ~80% of the min positive value so peaks visually dominate troughs.
+  const sovPositive = sov.filter(v => v > 0);
+  const sovMin = sovPositive.length ? Math.min(...sovPositive) : 0;
+  const sovMax = sov.length ? Math.max(...sov) : 0;
+  // If there's real variation, clip the y baseline so smaller bars look noticeably smaller.
+  // Bars start visually from yMin (so they don't all look the same height) but still anchor to 0 numerically.
+  // We achieve this by setting yaxis range to [sovMin*0.8, sovMax*1.05] when ratio is > 1.5x.
+  const sovRatio = sovMin > 0 ? sovMax / sovMin : 1;
+  const useTightRange = sovRatio > 1.5 && sovPositive.length >= 4;
+  const sovYMin = useTightRange ? Math.max(0, sovMin * 0.8) : 0;
+  const sovYMax = sovMax * 1.08;
+
+  // Build hover-only-on-bar text array: include hoverinfo:'text' so Plotly only fires hover when over a bar
   Plotly.react('trendSOV', [
     {x:monthLabels, y:sov, type:'bar',
-      marker:{color: isTop.map(t=>t?'#56D9A6':'#323847'), line:{width:0}},
-      text:sovHoverText, hovertemplate:'%{text}',
-      customdata:cd}
+      marker:{color: isTop.map(t=>t?'#56D9A6':'#3A4256'), line:{color:isTop.map(t=>t?'#56D9A6':'#4A5570'), width:1}},
+      hovertext: sovHoverText,
+      hovertemplate: '%{hovertext}',
+      hoverinfo: 'text',
+      textposition: 'none',
+      cliponaxis: false,
+      customdata: cd,
+      width: 0.7
+    }
   ], {...PLOTLY_LAYOUT,
-      xaxis:{...PLOTLY_LAYOUT.xaxis, tickangle:-30, automargin:true},
-      yaxis:{...PLOTLY_LAYOUT.yaxis, title:'SOV ($)'},
+      xaxis:{...PLOTLY_LAYOUT.xaxis, tickangle:-30, automargin:true, fixedrange:true},
+      yaxis:{...PLOTLY_LAYOUT.yaxis, title:'SOV ($)',
+             range:[sovYMin, sovYMax],
+             tickprefix:'$',
+             tickformat:'.2s',
+             nticks:6,
+             fixedrange:true,
+             zeroline:false},
       hovermode:'closest',
-      hoverlabel:{bgcolor:'#1E2330', bordercolor:'#2A3140', font:{color:'#F2F4F8', size:12, family:'Inter, sans-serif'}, align:'left'}
+      hoverdistance: 10,
+      bargap: 0.25,
+      hoverlabel:{bgcolor:'#1E2330', bordercolor:'#2A3140', font:{color:'#F2F4F8', size:12, family:'Inter, sans-serif'}, align:'left'},
+      shapes: useTightRange ? [{
+        type:'line', xref:'paper', x0:0, x1:1, y0:sovYMin, y1:sovYMin,
+        line:{color:'#8A92A3', width:1, dash:'dot'}
+      }] : [],
+      annotations: useTightRange ? [{
+        xref:'paper', yref:'paper', x:1, y:1.02, xanchor:'right', yanchor:'bottom',
+        text:`<i>y-axis starts at ${fmt.money(sovYMin)} to highlight contrast</i>`,
+        showarrow:false, font:{color:'#8A92A3', size:10}
+      }] : []
     }, PLOTLY_CONFIG);
 
   // Wire hover + click events on all 3 charts to update the detail panel
