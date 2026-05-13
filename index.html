@@ -413,9 +413,10 @@ tbody tr:last-child td{border-bottom:none}
             <div class="divider"></div>
             <ol style="line-height:1.8;color:var(--text-2);font-size:13.5px;padding-left:20px;margin:0">
               <li>For each Sunday, look back <strong>10 weeks</strong> per Employee × School × Language.</li>
-              <li>Compute <code>RegFromContacted = Reg / Contacted</code> and <code>RegFromCalls = Reg / Calls</code>.</li>
+              <li>Compute <code>RegFromCalls = Reg / Calls</code> — this is the <strong>single rank source</strong> used everywhere on this dashboard.</li>
               <li>Within each (Date, School, Language) group, sort by ratio and assign a <strong>volume-weighted quartile</strong>: ≤25% → R1, ≤50% → R2, ≤75% → R3, &gt;75% → R4.</li>
               <li>Rank 1 = <strong>weakest</strong>, Rank 4 = <strong>strongest</strong>.</li>
+              <li>Both <em>%&nbsp;calls to R3+R4</em> and <em>%&nbsp;contacts by R3+R4</em> bucket reps by this same <code>RankRegFromCalls</code> — the only difference is whether we count calls or contacts in the numerator.</li>
             </ol>
           </div>
           <div class="card">
@@ -634,8 +635,11 @@ function computeGoals(){
     if(!slm[k]) slm[k] = {s:f.s, l:f.l, m:f.m, Calls:0, Contacted:0, R34Calls:0, R34Contacts:0, SOV:0, Orders:0, Acq:0, Reps:new Set(), Upsales:0};
     const o = slm[k];
     o.Calls += f.c; o.Contacted += f.ct; o.SOV += f.v; o.Orders += f.o; o.Acq += f.a; o.Upsales += f.u; o.Reps.add(f.r);
-    if(r34Set.has(f.rc)) o.R34Calls += f.c;
-    if(r34Set.has(f.ro)) o.R34Contacts += f.ct;
+    // Use RankRegFromCalls for BOTH metrics — single source of truth for rank
+    if(r34Set.has(f.rc)){
+      o.R34Calls += f.c;
+      o.R34Contacts += f.ct;
+    }
   });
 
   // Per-month stats per combo
@@ -1031,23 +1035,80 @@ function renderDetail(){
     <div class="card" style="margin-bottom:16px">
       <div class="card-head"><div><h3 class="card-title">SOV by month</h3><p class="card-hint">Bars highlighted in green are the top-25% SOV months that defined the goal.</p></div></div>
       <div id="trendSOV" class="chart" style="height:300px"></div>
+    </div>
+    <div class="card" id="monthDetailCard" style="margin-bottom:16px">
+      <div class="card-head"><div><h3 class="card-title">Month detail</h3><p class="card-hint" id="monthDetailHint">Hover any point on a chart · click a point to pin it here.</p></div></div>
+      <div id="monthDetailBody" style="min-height:120px"></div>
     </div>`;
 
   document.getElementById('detailContent').innerHTML = html;
   bindDetailPickers();
 
-  // Plot trends
+  // ===== Interactive trend charts =====
   const months = combo.months.map(m=>m.m);
+  const monthLabels = months.map(fmt.monthName);
   const callsPct = combo.months.map(m=>m.callsR34Pct);
   const contPct  = combo.months.map(m=>m.contR34Pct);
   const sov      = combo.months.map(m=>m.SOV);
   const isTop = combo.months.map(m=> combo.topMonths.some(tm=>tm.m===m.m));
 
-  // Common: goal lines as horizontal shape
-  const trendLayout = (goal, title, isTopArr) => ({
+  // Build rich per-month context for hover and detail panel
+  const monthCtx = combo.months.map((m, i)=> ({
+    m: m.m,
+    label: fmt.monthName(m.m),
+    Calls: m.Calls, Contacted: m.Contacted, SOV: m.SOV, Orders: m.Orders, Acq: m.Acq,
+    R34Calls: m.R34Calls, R34Contacts: m.R34Contacts,
+    callsR34Pct: m.callsR34Pct, contR34Pct: m.contR34Pct,
+    isTop: isTop[i],
+    gapCalls: (m.callsR34Pct!=null && combo.goalCalls!=null) ? m.callsR34Pct - combo.goalCalls : null,
+    gapCont:  (m.contR34Pct!=null  && combo.goalCont!=null)  ? m.contR34Pct  - combo.goalCont  : null,
+  }));
+  // Stash on the page so event handlers can find it
+  DETAIL_MONTH_CTX = monthCtx;
+  DETAIL_COMBO = combo;
+  DETAIL_PINNED = null;
+
+  // customdata layout: [calls, contacted, sov, %callsR34, %contR34, isTop(0/1), gapCalls, gapCont, orders, acq]
+  const cd = monthCtx.map(c => [
+    c.Calls, c.Contacted, c.SOV, c.callsR34Pct, c.contR34Pct, c.isTop?1:0,
+    c.gapCalls, c.gapCont, c.Orders, c.Acq
+  ]);
+
+  const callsHover = '<b>%{x}</b>%{customdata[5]|}'
+    + '<br>% R3+R4 calls: <b>%{customdata[3]:.1f}%</b>'
+    + '<br>Gap vs goal: %{customdata[6]:+.1f} pts'
+    + '<br>Calls: %{customdata[0]:,.0f}  ·  to R3+R4: %{customdata[0]:,.0f}'
+    + '<extra></extra>';
+  // Cleaner: pre-format custom strings as text labels using a separate text array
+  const callsHoverTpl = m => `<b>${m.label}</b>${m.isTop?'  ★ top-25% SOV':''}`
+    + `<br>% R3+R4 calls: <b>${m.callsR34Pct!=null?m.callsR34Pct.toFixed(1)+'%':'—'}</b>`
+    + (m.gapCalls!=null?`  (${m.gapCalls>=0?'+':''}${m.gapCalls.toFixed(1)} pts vs goal)`:'')
+    + `<br>Calls: ${fmt.num(m.Calls)}  ·  R3+R4 calls: ${fmt.num(m.R34Calls)}`
+    + `<br>SOV: ${fmt.money(m.SOV)}  ·  Orders: ${fmt.num(m.Orders)}`
+    + `<extra></extra>`;
+  const contHoverTpl = m => `<b>${m.label}</b>${m.isTop?'  ★ top-25% SOV':''}`
+    + `<br>% R3+R4 contacts: <b>${m.contR34Pct!=null?m.contR34Pct.toFixed(1)+'%':'—'}</b>`
+    + (m.gapCont!=null?`  (${m.gapCont>=0?'+':''}${m.gapCont.toFixed(1)} pts vs goal)`:'')
+    + `<br>Contacts: ${fmt.num(m.Contacted)}  ·  R3+R4 contacts: ${fmt.num(m.R34Contacts)}`
+    + `<br>SOV: ${fmt.money(m.SOV)}  ·  Orders: ${fmt.num(m.Orders)}`
+    + `<extra></extra>`;
+  const sovHoverTpl = m => `<b>${m.label}</b>${m.isTop?'  ★ top-25% SOV':''}`
+    + `<br>SOV: <b>${fmt.money(m.SOV)}</b>`
+    + `<br>Orders: ${fmt.num(m.Orders)}  ·  Acquisitions: ${fmt.num(m.Acq)}`
+    + `<br>Calls: ${fmt.num(m.Calls)}  ·  Contacts: ${fmt.num(m.Contacted)}`
+    + `<extra></extra>`;
+
+  const callsHoverText = monthCtx.map(callsHoverTpl);
+  const contHoverText  = monthCtx.map(contHoverTpl);
+  const sovHoverText   = monthCtx.map(sovHoverTpl);
+
+  // Goal lines as horizontal shape
+  const trendLayout = (goal) => ({
     ...PLOTLY_LAYOUT,
-    xaxis:{...PLOTLY_LAYOUT.xaxis, tickvals:months, ticktext:months.map(fmt.monthName), tickangle:-30, automargin:true},
+    xaxis:{...PLOTLY_LAYOUT.xaxis, tickvals:monthLabels, ticktext:monthLabels, tickangle:-30, automargin:true, fixedrange:false},
     yaxis:{...PLOTLY_LAYOUT.yaxis, title:'% to R3+R4', ticksuffix:'%'},
+    hovermode:'closest',
+    hoverlabel:{bgcolor:'#1E2330', bordercolor:'#2A3140', font:{color:'#F2F4F8', size:12, family:'Inter, sans-serif'}, align:'left'},
     shapes: goal!=null ? [{type:'line', xref:'paper', x0:0, x1:1, y0:goal, y1:goal,
       line:{color:'#56D9A6', width:2, dash:'dash'}}] : [],
     annotations: goal!=null ? [{xref:'paper', x:1, y:goal, xanchor:'right', yanchor:'bottom',
@@ -1055,22 +1116,111 @@ function renderDetail(){
   });
 
   Plotly.react('trendCalls', [
-    {x:months.map(fmt.monthName), y:callsPct, type:'scatter', mode:'lines+markers',
-      line:{color:'#7BA7FF', width:2}, marker:{size:isTop.map(t=>t?12:7), symbol:isTop.map(t=>t?'star':'circle'), color:isTop.map(t=>t?'#56D9A6':'#7BA7FF'), line:{color:'#0A0B0F',width:1.5}},
-      hovertemplate:'%{x}<br>%R3+R4: %{y:.1f}%<extra></extra>'}
-  ], trendLayout(combo.goalCalls, 'calls', isTop), PLOTLY_CONFIG);
+    {x:monthLabels, y:callsPct, type:'scatter', mode:'lines+markers',
+      line:{color:'#7BA7FF', width:2},
+      marker:{size:isTop.map(t=>t?14:9), symbol:isTop.map(t=>t?'star':'circle'),
+              color:isTop.map(t=>t?'#56D9A6':'#7BA7FF'),
+              line:{color:'#0A0B0F',width:1.5}},
+      text:callsHoverText, hovertemplate:'%{text}',
+      customdata:cd}
+  ], trendLayout(combo.goalCalls), PLOTLY_CONFIG);
 
   Plotly.react('trendCont', [
-    {x:months.map(fmt.monthName), y:contPct, type:'scatter', mode:'lines+markers',
-      line:{color:'#A78BFA', width:2}, marker:{size:isTop.map(t=>t?12:7), symbol:isTop.map(t=>t?'star':'circle'), color:isTop.map(t=>t?'#56D9A6':'#A78BFA'), line:{color:'#0A0B0F',width:1.5}},
-      hovertemplate:'%{x}<br>%R3+R4: %{y:.1f}%<extra></extra>'}
-  ], trendLayout(combo.goalCont, 'contacts', isTop), PLOTLY_CONFIG);
+    {x:monthLabels, y:contPct, type:'scatter', mode:'lines+markers',
+      line:{color:'#A78BFA', width:2},
+      marker:{size:isTop.map(t=>t?14:9), symbol:isTop.map(t=>t?'star':'circle'),
+              color:isTop.map(t=>t?'#56D9A6':'#A78BFA'),
+              line:{color:'#0A0B0F',width:1.5}},
+      text:contHoverText, hovertemplate:'%{text}',
+      customdata:cd}
+  ], trendLayout(combo.goalCont), PLOTLY_CONFIG);
 
   Plotly.react('trendSOV', [
-    {x:months.map(fmt.monthName), y:sov, type:'bar',
+    {x:monthLabels, y:sov, type:'bar',
       marker:{color: isTop.map(t=>t?'#56D9A6':'#323847'), line:{width:0}},
-      hovertemplate:'%{x}<br>SOV $%{y:,.0f}<extra></extra>'}
-  ], {...PLOTLY_LAYOUT, xaxis:{...PLOTLY_LAYOUT.xaxis, tickangle:-30, automargin:true}, yaxis:{...PLOTLY_LAYOUT.yaxis, title:'SOV ($)'}}, PLOTLY_CONFIG);
+      text:sovHoverText, hovertemplate:'%{text}',
+      customdata:cd}
+  ], {...PLOTLY_LAYOUT,
+      xaxis:{...PLOTLY_LAYOUT.xaxis, tickangle:-30, automargin:true},
+      yaxis:{...PLOTLY_LAYOUT.yaxis, title:'SOV ($)'},
+      hovermode:'closest',
+      hoverlabel:{bgcolor:'#1E2330', bordercolor:'#2A3140', font:{color:'#F2F4F8', size:12, family:'Inter, sans-serif'}, align:'left'}
+    }, PLOTLY_CONFIG);
+
+  // Wire hover + click events on all 3 charts to update the detail panel
+  wireTrendInteractions();
+  renderMonthDetail(null);  // initial state
+}
+
+/* ===== Interactive trend state + handlers ===== */
+let DETAIL_MONTH_CTX = null;
+let DETAIL_COMBO = null;
+let DETAIL_PINNED = null;  // index of pinned month (or null)
+let DETAIL_LAST_HOVER = null;
+
+function wireTrendInteractions(){
+  ['trendCalls','trendCont','trendSOV'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el || !el.on) return;
+    el.removeAllListeners && el.removeAllListeners('plotly_hover');
+    el.removeAllListeners && el.removeAllListeners('plotly_unhover');
+    el.removeAllListeners && el.removeAllListeners('plotly_click');
+    el.on('plotly_hover', evt => {
+      if(!evt.points || !evt.points.length) return;
+      const i = evt.points[0].pointIndex;
+      DETAIL_LAST_HOVER = i;
+      if(DETAIL_PINNED == null) renderMonthDetail(i);
+    });
+    el.on('plotly_unhover', () => {
+      if(DETAIL_PINNED == null) renderMonthDetail(null);
+    });
+    el.on('plotly_click', evt => {
+      if(!evt.points || !evt.points.length) return;
+      const i = evt.points[0].pointIndex;
+      if(DETAIL_PINNED === i){ DETAIL_PINNED = null; renderMonthDetail(null); }
+      else { DETAIL_PINNED = i; renderMonthDetail(i); }
+    });
+  });
+}
+
+function renderMonthDetail(idx){
+  const body = document.getElementById('monthDetailBody');
+  const hint = document.getElementById('monthDetailHint');
+  if(!body || !DETAIL_MONTH_CTX) return;
+  if(idx == null){
+    hint.textContent = 'Hover any point on a chart · click a point to pin it here.';
+    body.innerHTML = `<p class="muted" style="margin:0;padding:8px 0">No month selected. Hover a point above to see its full breakdown.</p>`;
+    return;
+  }
+  const m = DETAIL_MONTH_CTX[idx];
+  if(!m){ return; }
+  const pinned = (DETAIL_PINNED === idx);
+  hint.innerHTML = pinned
+    ? `<span style="color:#56D9A6">● Pinned:</span> ${m.label} · click the point again to unpin.`
+    : `Previewing ${m.label} · click the point to pin.`;
+
+  const gapCallsCls = m.gapCalls==null ? 'muted' : (m.gapCalls>=-1?'text-good':m.gapCalls>=-8?'text-warn':'text-bad');
+  const gapContCls  = m.gapCont ==null ? 'muted' : (m.gapCont >=-1?'text-good':m.gapCont >=-8?'text-warn':'text-bad');
+  const c = DETAIL_COMBO;
+
+  body.innerHTML = `
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+      <div style="font-size:22px;font-weight:700">${m.label}</div>
+      ${m.isTop ? '<span class="pill good" style="font-size:11px">★ Top-25% SOV month</span>' : ''}
+      ${pinned ? '<span class="pill info" style="font-size:11px">Pinned</span>' : ''}
+    </div>
+    <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+      <div class="kpi"><div class="kpi-label">Calls</div><div class="kpi-value" style="font-size:20px">${fmt.num(m.Calls)}</div><div class="kpi-sub">to R3+R4: ${fmt.num(m.R34Calls)}</div></div>
+      <div class="kpi"><div class="kpi-label">Contacts</div><div class="kpi-value" style="font-size:20px">${fmt.num(m.Contacted)}</div><div class="kpi-sub">by R3+R4: ${fmt.num(m.R34Contacts)}</div></div>
+      <div class="kpi"><div class="kpi-label">SOV</div><div class="kpi-value" style="font-size:20px">${fmt.money(m.SOV)}</div><div class="kpi-sub">${fmt.num(m.Orders)} orders · ${fmt.num(m.Acq)} acq</div></div>
+      <div class="kpi"><div class="kpi-label">% R3+R4 calls</div>
+        <div class="kpi-value" style="font-size:20px">${m.callsR34Pct!=null?fmt.pct(m.callsR34Pct):'—'}</div>
+        <div class="kpi-sub">Goal ${c.goalCalls!=null?fmt.pct(c.goalCalls):'—'} · <span class="${gapCallsCls}">${fmt.signedPts(m.gapCalls)}</span></div></div>
+      <div class="kpi"><div class="kpi-label">% R3+R4 contacts</div>
+        <div class="kpi-value" style="font-size:20px">${m.contR34Pct!=null?fmt.pct(m.contR34Pct):'—'}</div>
+        <div class="kpi-sub">Goal ${c.goalCont!=null?fmt.pct(c.goalCont):'—'} · <span class="${gapContCls}">${fmt.signedPts(m.gapCont)}</span></div></div>
+    </div>
+  `;
 }
 function bindDetailPickers(){
   const ds = document.getElementById('detailSchool');
