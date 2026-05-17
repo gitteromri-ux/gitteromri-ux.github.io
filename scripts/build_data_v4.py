@@ -20,7 +20,7 @@ def rank_lbl(x):
     if x == -1: return "Unranked"
     return f"R{int(x)}"
 
-df = pd.read_pickle("/tmp/df_v2.pkl")
+df = pd.read_pickle("/tmp/df_v3.pkl")
 df["Rep"] = df["EmployeeID"].apply(pseudo)
 df = df.dropna(subset=["SemesterCategory", "LanguageName"]).copy()
 
