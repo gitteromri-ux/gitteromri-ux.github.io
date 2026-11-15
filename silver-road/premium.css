@@ -329,3 +329,5 @@ body.sr-premium{background:#fff!important;color:#102c4b!important}
 .sr-about-us #sr-main>[data-id="0724786"]>.e-con{position:relative;z-index:2}
 .sr-about-us .elementor-widget-hotspot img{position:relative;z-index:1}
 .sr-about-us .e-hotspot{z-index:3}
+.sr-about-us #sr-main>[data-id="0724786"]::before{display:none!important}
+.sr-about-us #sr-main>[data-id="0724786"]{background-color:#edf6ff!important;background-blend-mode:screen}
