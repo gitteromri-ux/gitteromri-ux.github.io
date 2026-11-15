@@ -326,3 +326,6 @@ body.sr-premium{background:#fff!important;color:#102c4b!important}
 .sr-global-expention #sr-main>[data-id="01c91ae"]::before{background:#edf6fff0!important;opacity:1!important}
 .sr-premium header .elementor-widget-image{width:140px!important}
 .sr-premium #sr-main .elementor-icon-list-icon svg{fill:#17648f}
+.sr-about-us #sr-main>[data-id="0724786"]>.e-con{position:relative;z-index:2}
+.sr-about-us .elementor-widget-hotspot img{position:relative;z-index:1}
+.sr-about-us .e-hotspot{z-index:3}
