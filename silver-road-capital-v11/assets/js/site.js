@@ -59,5 +59,5 @@
     if(calm)return;r.setAttribute('y',H);r.setAttribute('height',0);var t0=null,dl=350+o*120,dur=1500;
     function st(t){if(!t0)t0=t;var p=Math.max(0,Math.min(1,(t-t0-dl)/dur));p=1-Math.pow(1-p,3);r.setAttribute('y',H*(1-p));r.setAttribute('height',H*p);if(p<1)requestAnimationFrame(st);}requestAnimationFrame(st);});
     requestAnimationFrame(function(){h7.classList.add('go');});}
-  d.querySelectorAll('video[data-src]').forEach(function(v){new IntersectionObserver(function(es,o){if(es[0].isIntersecting){v.src=v.dataset.src;if(!calm){var pr=v.play();if(pr&&pr.catch)pr.catch(function(){});}o.disconnect();}},{rootMargin:'300px'}).observe(v);});
+  d.querySelectorAll('video[data-src]').forEach(function(v){new IntersectionObserver(function(es,o){if(es[0].isIntersecting){v.src=(innerWidth<900&&v.dataset.m)?v.dataset.m:v.dataset.src;if(!calm){var pr=v.play();if(pr&&pr.catch)pr.catch(function(){});}o.disconnect();}},{rootMargin:'300px'}).observe(v);});
 })();
