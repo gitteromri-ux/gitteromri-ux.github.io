@@ -632,3 +632,15 @@ body{font-family:var(--sans);font-synthesis:none}
 .site-foot{background:radial-gradient(60% 80% at 50% 0%,rgba(27,117,186,.35),transparent 70%),#030B1A}
 body:has(.s-hero) .site-head.stuck,.site-head.stuck,.site-head{background:rgba(4,16,36,.94)}
 body:has(.s-hero) .site-head:not(.stuck){background:linear-gradient(180deg,rgba(3,11,26,.7),transparent)}
+/* phones: light and immediate */
+@media (max-width:860px){
+ .rv,.gl,.arch.rv,.arch.rv.in{opacity:1 !important;transform:none !important;transition:none}
+ .arch.rv.in:nth-child(even),.arch:nth-child(even){transform:translateY(28px) !important}
+ .arch span{clip-path:none !important}.arch figcaption{opacity:1}
+ .s-hero video,.arch img{animation:none}
+ .gl,.tile .tx,.tile .go,.site-head.stuck{-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+ .gl{background:linear-gradient(160deg,rgba(20,44,80,.82),rgba(8,24,50,.72))}
+ .tile .tx{background:linear-gradient(160deg,rgba(6,24,51,.86),rgba(6,24,51,.72))}
+ .s-hero{position:relative}.s-off{margin-top:-40px}
+ .marq{animation-duration:200s}
+}
